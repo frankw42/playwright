@@ -1,0 +1,23 @@
+# Clojure/Java build artifacts
+/.cpcache/
+/target/
+/out/
+
+# IDE/editor
+/.idea/
+/*.iml
+/.vscode/
+
+# Playwright temp data
+/playwright-report/
+/playwright-artifacts/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs / local state
+*.log
+
+# Clojure CLI local deps cache (optional)
+/deps.edn.lock
