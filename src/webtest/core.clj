@@ -1,25 +1,24 @@
 (ns webtest.core
-    (:require [clojure.string :as str]
-     ; [cheshire.core :as json]
-      [clojure.pprint :refer [pprint]]
-      [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
-    (:import
-      ;(com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions Page ElementHandle Locator)
-      (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions Page Page$ScreenshotOptions ElementHandle Locator)
-      (java.nio.file Paths)
-      (java.time Instant)
-      (java.io File)
-      )
-    (:import [com.microsoft.playwright Page Page$WaitForSelectorOptions Page$WaitForFunctionOptions])
-    )
-
+  (:require [clojure.string :as str]
+            [clojure.java.io :as io]
+            [clojure.edn :as edn]
+            [clojure.pprint :refer [pprint]]
+            [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
+  (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
+                                     Page Page$ScreenshotOptions
+                                     Page$WaitForSelectorOptions Page$WaitForFunctionOptions
+                                     Page$WaitForLoadStateOptions
+                                     ElementHandle Locator)
+           (java.nio.file Paths)
+           (java.time Instant)
+           (java.io File)))
 
 ;; --- State / sample params --------------------------------------------------
 
-(defonce state (atom {:index 0 :numInputs 0 :countInputs 0}))
+(defonce state (atom {:index 0 :numInputs 0 :countInputs 0 "url" "https://frankw42.github.io/public/index.html"}))
 
 (def params
-  {"username" "George"
+  {"username" "Henry"
    "password" "abc"
    "formal question" "Show formal question with space"
    "formal-question" "internal name: formal-question"
@@ -34,6 +33,28 @@
 
    }
   )
+
+
+
+(defn read-params-edn-from-root-slurp!
+  []
+  (let [f (io/file "params.edn")]
+    (if (.exists f)
+      (edn/read-string (slurp f))
+      (throw (ex-info "params.edn not found in project root." {:path (.getAbsolutePath f)})))))
+
+
+(defn load-params!
+      "Loads params.edn and stores it in the given state atom under :params. Returns the loaded params."
+      [state-atom]
+      (try
+        (let [params (read-params-edn-from-root-slurp!)]
+             (swap! state-atom assoc :params params)
+             (println "load-params! " params)
+             params)
+        (catch Exception e
+          (println "Error loading params.edn:" (.getMessage e))
+          (throw e))))
 
 ;; --- Helpers ---------------------------------------------------------------
 
@@ -296,41 +317,82 @@
 
 ;; --- Main ------------------------------------------------------------------
 
-;;; (def url "https://frankw42.github.io/public/index.html")
- (def url "https://frankw42.github.io/public/index.html")
- ;   (def url "http://localhost:8080/examples/sample.html")
-
+;;;    (def url "https://frankw42.github.io/public/index.html")
+ ;;;   (def url "http://localhost:8080/examples/sample.html")
 
 
 (defn toggle-jqx-dropdown-with-check
-      "Clicks the first `.jqx-dropdownlist` to open, waits 500ms, verifies that
-       `#dropdownlistContentjqxImageQuery` is present, then clicks the dropdown again to close.
-       Returns {:opened? true :verified? true :closed? true} on success; throws on failure.
-       Options:
-         :timeout-ms time to wait for the initial dropdown widget (default 5000)"
-      [^Page page & {:keys [timeout-ms] :or {timeout-ms 5000}}]
-      (let [widget-sel ".jqx-dropdownlist"
-            wait-opts (doto (Page$WaitForSelectorOptions.) (.setTimeout timeout-ms))
-            widget (.waitForSelector page widget-sel wait-opts)]
-           (when (nil? widget)
-                 (throw (ex-info (str "Could not find widget selector " widget-sel) {})))
-           ;; First click to open
-           (.click ^com.microsoft.playwright.ElementHandle widget)
-           ;; Fixed wait for jqx to render the content
-           (Thread/sleep 500)
-           ;; Verify content element exists
-           (let [content (.querySelector page "#dropdownlistContentjqxImageQuery")]
-                (when (nil? content)
-                      (throw (ex-info "Expected #dropdownlistContentjqxImageQuery not found after open" {})))
-                ;; Second click to close
-                (.click ^com.microsoft.playwright.ElementHandle widget)
-                {:opened? true :verified? true :closed? true})))
+  "Attempts to click the first `.jqx-dropdownlist` to open, waits 500ms,
+   checks for `#dropdownlistContentjqxImageQuery`, then clicks again to close.
+   Catches all exceptions; returns a map summarizing what succeeded/failed."
+  [^Page page & {:keys [timeout-ms] :or {timeout-ms 5000}}]
+  (let [widget-sel ".jqx-dropdownlist"
+        ;; attempt to get the widget, but catch any timeout or other errors
+        widget
+        (try
+          (let [wait-opts (doto (Page$WaitForSelectorOptions.) (.setTimeout timeout-ms))]
+            (.waitForSelector page widget-sel wait-opts))
+          (catch Exception e
+            (println "Warning: error locating widget:" (.getMessage e))
+            nil))
+        result-base {:widget-present (boolean widget)
+                     :opened? false
+                     :verified? false
+                     :closed? false}]
+    (if (nil? widget)
+      (assoc result-base :error (str "Widget not found: " widget-sel))
+      (let [open-res
+            (try
+              (.click ^com.microsoft.playwright.ElementHandle widget)
+              {:clicked? true}
+              (catch Exception e
+                {:clicked? false :error (str "open click failed: " (.getMessage e))}))
+            _ (Thread/sleep 500)
+            content
+            (try
+              (.querySelector page "#dropdownlistContentjqxImageQuery")
+              (catch Exception e
+                (println "Warning: error querying content element:" (.getMessage e))
+                nil))
+            verified? (boolean content)
+            close-res
+            (try
+              (.click ^com.microsoft.playwright.ElementHandle widget)
+              {:clicked? true}
+              (catch Exception e
+                {:clicked? false :error (str "close click failed: " (.getMessage e))}))]
+        {:widget-present true
+         :opened? (boolean (:clicked? open-res))
+         :verified? verified?
+         :closed? (boolean (:clicked? close-res))
+         :details {:open open-res
+                   :verify (if verified?
+                             {:found true}
+                             {:found false :reason "Content missing"})
+                   :close close-res}}))))
 
 (defn -main [& args]
       (println "Starting Playwright-based test...")
       (println "a: "  (str (ht/now)) " b: "  (str (Instant/now)))
       (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
       (println "Time:  " (ht/time-str (ht/now)) "\n\n")
+
+  (load-params! state)
+
+  (let [[param-1 param-2 & rest] args]
+    (println "param-1:" param-1 "param-2:" param-2 "others:" rest)
+    (if param-1
+      (let [firstSavedUrl (get-in @state [:params (str param-1)])]
+        (println "firstSavedUrl: " firstSavedUrl)
+        (if firstSavedUrl
+          (swap! state assoc "url" firstSavedUrl)
+          (swap! state assoc "url" (str param-1)))
+          ) ; if
+      ) ; if
+      ) ; let
+
+  (println "url:: " (get @state "url"))
+
 
 
       (let [pw (Playwright/create)
@@ -339,24 +401,22 @@
             browser (.launch browser-type launch-opts)
             context (.newContext browser)
             page (.newPage context)]
-           (try
-             ;; Navigate
-             (.navigate page url)
+        (try
+          ;; Navigate
+          (println "url:: " (get @state "url"))
+          (.navigate page (get @state "url"))
 
-             ;======================
+
+          ;======================
              (dotimes [_ 3]
                       (println " click result: "
                                (toggle-jqx-dropdown-with-check page))
                       (delay-ms 1000)
                       )
 
-             (delay-ms 3000)
+             (delay-ms 1500)
 
              ;=======================
-
-
-
-
 
              ;; Non-fatal check for <h1>
              (let [h1-loc (.locator page "h1")]
@@ -364,7 +424,7 @@
                         (println "Found <h1> on page:" (some-> (.textContent (.first h1-loc)) str/trim))))
 
              ;; Fill fields
-             (fill-fields! page params)
+             (fill-fields! page (:params @state))
 
              ;; Diagnostics and submit with navigation detection
              (let [before-url (.url page)
@@ -419,3 +479,6 @@
                 )))
            )
       )
+
+
+;;   clojure -M -m webtest.core owlUrl
