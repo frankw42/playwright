@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.pprint :refer [pprint]]
+            [webtest.owl :as owl]
             [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page Page$ScreenshotOptions
@@ -15,7 +16,7 @@
 
 ;; --- State / sample params --------------------------------------------------
 
-(defonce state (atom {:index 0 :numInputs 0 :countInputs 0 "url" "https://frankw42.github.io/public/index.html"}))
+(defonce state (atom {:index 0 :numInputs 0 :countInputs 0 :owlTest false  "url" "https://frankw42.github.io/public/index.html"}))
 
 (def params
   {"username" "Henry"
@@ -27,13 +28,6 @@
    :name "Alice"
    :email "alice@example.com"
    :roles ["admin" "user"]})
-
-(def testSuiteInfo
-  {:name "Regression-Test"
-
-   }
-  )
-
 
 
 (defn read-params-edn-from-root-slurp!
@@ -318,10 +312,11 @@
 ;; --- Main ------------------------------------------------------------------
 
 ;;;    (def url "https://frankw42.github.io/public/index.html")
- ;;;   (def url "http://localhost:8080/examples/sample.html")
+;;;    (def url "http://localhost:8080/examples/sample.html")
+;;;    (def url "http://localhost:8080")
 
 
-(defn toggle-jqx-dropdown-with-check
+(defn toggle-jqx-dropdown-with-checkOld
   "Attempts to click the first `.jqx-dropdownlist` to open, waits 500ms,
    checks for `#dropdownlistContentjqxImageQuery`, then clicks again to close.
    Catches all exceptions; returns a map summarizing what succeeded/failed."
@@ -373,7 +368,7 @@
 
 (defn -main [& args]
       (println "Starting Playwright-based test...")
-      (println "a: "  (str (ht/now)) " b: "  (str (Instant/now)))
+        ;;;(println "a: "  (str (ht/now)) " b: "  (str (Instant/now)))
       (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
       (println "Time:  " (ht/time-str (ht/now)) "\n\n")
 
@@ -389,11 +384,19 @@
           (swap! state assoc "url" (str param-1)))
           ) ; if
       ) ; if
-      ) ; let
 
-  (println "url:: " (get @state "url"))
+    (println "**** url: " (get @state "url"))
 
+    (when (= param-2 "owl")
+      (swap! state assoc :owlTest true)
+      (owl/owlTest state)
+      )
+    ) ; let
+;;
+  ;;;    ======== at test to only run one test  =============== dddd
+  ;;;
 
+  (if (not (:owlTest @state))
 
       (let [pw (Playwright/create)
             browser-type (.chromium pw)
@@ -405,18 +408,6 @@
           ;; Navigate
           (println "url:: " (get @state "url"))
           (.navigate page (get @state "url"))
-
-
-          ;======================
-             (dotimes [_ 3]
-                      (println " click result: "
-                               (toggle-jqx-dropdown-with-check page))
-                      (delay-ms 1000)
-                      )
-
-             (delay-ms 1500)
-
-             ;=======================
 
              ;; Non-fatal check for <h1>
              (let [h1-loc (.locator page "h1")]
@@ -478,7 +469,9 @@
                    (println "Error closing Playwright:" (.getMessage e)))
                 )))
            )
-      )
+)
+  )
 
-
+ ;  clojure -M -m webtest.core   http://localhost:8080/examples/sample.html
 ;;   clojure -M -m webtest.core owlUrl
+;;   clojure -M -m webtest.core owlUrl owl
