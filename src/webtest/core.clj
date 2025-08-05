@@ -392,8 +392,8 @@
       (owl/owlTest state)
       )
     ) ; let
-;;
-  ;;;    ======== at test to only run one test  =============== dddd
+  ;;;
+  ;;;    ======== at test to only run one test  ===============
   ;;;
 
   (if (not (:owlTest @state))
