@@ -13,6 +13,8 @@
            (java.time Instant)
            (java.io File)))
 
+(def file-path (Paths/get (System/getProperty "user.home")
+                          (into-array String ["Downloads"])))    ;"myfile.txt"
 
 (defn delay-ms [ms]
   (when (pos? ms) (Thread/sleep ms)))
@@ -21,6 +23,63 @@
   (try
     (some-> (.textContent el) str/trim)
     (catch Exception _ nil)))
+
+
+(defn download-and-handle
+  [^Page page selector dest-path]
+  ;; 1. Kick off the download and wait for it to complete
+  (let [download
+        (.waitForDownload page
+                          (fn []
+                            (.click page selector)))
+
+        ;; 2. Get the temp path where Playwright saved it
+        temp-path (.path download)]
+    (println "Downloaded temp file at:" temp-path)
+
+    ;; 3a. Read it into memory
+    (let [contents (slurp (str temp-path))]
+      (println "First 200 chars of download:" (subs contents 0 (min 200 (count contents)))))
+
+    ;; 3b. Or move it to a permanent location
+    (io/copy (io/file (str temp-path))
+             (io/file dest-path))
+    (println "Saved download to:" dest-path)
+
+    ;; 4. Return the final path
+    dest-path))
+
+
+
+(defn get-jqx-item-span-text
+  [^Page page key]
+  (let [loc (.locator page key)]  ;; "div#listitem1innerListBoxjqxImageQuery span"
+    (when (pos? (.count loc))
+      (str/trim (.textContent loc)))))
+
+
+
+(defn dropdownSelect
+  "Opens the first `.jqx-dropdownlist`, waits for the 2nd item to render, then clicks it.
+   Returns true on click, false if it never appeared."
+  [^Page page key i & {:keys [timeout-ms] :or {timeout-ms 5000}}]
+  ;; 1) Open the dropdown
+  (.click page key)
+  ;; 2) Wait for the second item’s div to appear
+  (let [item-selector  (str "#listitem"  i  "innerListBoxjqxImageQuery")
+        - (println "item selector:: "    item-selector)
+        opts          (doto (Page$WaitForSelectorOptions.) (.setTimeout timeout-ms))
+        handle        (.waitForSelector page item-selector opts)]
+    (when handle
+      (delay-ms 2000)
+      (println "get item span text:: "
+      (get-jqx-item-span-text page (str "div#listitem" i  "innerListBoxjqxImageQuery span") ))
+
+      (delay-ms 2000)
+
+      ;; 3) Click it
+      (.click page item-selector)
+      true)))
 
 
 
@@ -115,6 +174,7 @@
         browser (.launch browser-type launch-opts)
         context (.newContext browser)
         page (.newPage context)]
+
     (try
       ;; Navigate
       (println "url:: " (get @state "url"))
@@ -124,34 +184,29 @@
       ;==========  Select 3 images for flipbook  ============
       (dotimes [_ 3]
         (println " click result: "
-         ; (toggle-jqx-dropdown-with-check page ".jqx-dropdownlist"  "#dropdownlistContentjqxImageQuery"))
-        (toggle-jqx-dropdown-with-check page "#jqxImageQuery"  "#dropdownlistContentjqxImageQuery"))
+                 ; (toggle-jqx-dropdown-with-check page ".jqx-dropdownlist"  "#dropdownlistContentjqxImageQuery"))
+                 (toggle-jqx-dropdown-with-check page "#jqxImageQuery" "#dropdownlistContentjqxImageQuery"))
         (delay-ms 1000)
         )
       (delay-ms 500)
 
       ;====  click Blink button to start flipbook animation  =====
-      (extract-label-and-name page  "#blink-button")
+      (extract-label-and-name page "#blink-button")
       (delay-ms 5500)
 
       ;===== select and play music track =====
-      (toggle-jqx-dropdown-with-check page "#jqxMusicQuery"  "#dropdownlistContentjqxImageQuery")
+      (toggle-jqx-dropdown-with-check page "#jqxMusicQuery" "#dropdownlistContentjqxImageQuery")
       (delay-ms 6500)
 
       ;====  click Blink button to stop flipbook animation  =====
-      (extract-label-and-name page    "#blink-button")
+      (extract-label-and-name page "#blink-button")
 
       ;====  Pause audio   ====
       (delay-ms 2500)
+
       ;; pause and rewind
-      (.evaluate page
-                 "( () => {
-                      const a = document.querySelector('audio');
-                      if (a) {
-                        a.pause();
-                        a.currentTime = 0;
-                      }
-                    })")
+      (.evaluate page "( () => {  const a = document.querySelector('audio');
+                      if (a) {   a.pause();   a.currentTime = 0;  }  })")
 
       ;====  click Info button  - visible ====
       (println " click result: "
@@ -165,20 +220,32 @@
 
       (delay-ms 2500)
 
-      ;====  click Info button  - visible ====
-      (println " click result: "
-               (extract-label-and-name page "#download-button"))
-      ))
-  )
+      ;==== select item 2 on dropdown list which is "Puppy" ===
+      (dropdownSelect page "#jqxImageQuery" 2)
 
 
+      ;====== turn on audio   ===
+      (.evaluate page "( () => {  const a = document.querySelector('audio');
+                      if (a) {   a.play();   a.currentTime = 0;  }  })")
 
 
+      ;;;;;=====  start flipbook again  ===
+      (extract-label-and-name page "#blink-button")
 
-;;=====================================
+      (delay-ms 2500)
 
-;(.evaluate page
-;           "( () => {
-;                const a = document.querySelector('audio');
-;                if (a) a.play();
-;              })")
+      ;;;;;===== Click Tilt again  ===
+      (extract-label-and-name page "#tilt-button")
+
+      (delay-ms 2500)
+
+
+      ;====  click download button  - visible ====
+      (println "file-path:: " file-path)
+      (download-and-handle page "#download-button"  (str file-path "/aaa.txt"))
+      )
+
+    ;;=====================================
+     ;                END
+    ;;=====================================
+    ))
