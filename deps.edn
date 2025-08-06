@@ -1,6 +1,7 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
         cheshire/cheshire {:mvn/version "5.11.0"}
+        com.draines/postal   {:mvn/version "2.0.4"}
         com.microsoft.playwright/playwright {:mvn/version "1.54.0"}
         io.github.frankw42/time-lib {:git/tag "v1.0" :git/sha "db32f36"}
         }

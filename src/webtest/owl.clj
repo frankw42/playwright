@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.pprint :refer [pprint]]
+            [webtest.email :as email]
             [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page Page$ScreenshotOptions
@@ -15,6 +16,33 @@
 
 (def file-path (Paths/get (System/getProperty "user.home")
                           (into-array String ["Downloads"])))    ;"myfile.txt"
+
+
+;;;===============================
+
+(defn mail
+  "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
+  [body-text attachment-path]
+  (let [smtp-opts {:host "smtp.gmail.com"
+                   :port 587
+                   :user "frankw45@gmail.com"
+                   :pass "gzbd ljcs onez fouu"
+                   :tls  true}
+        report-file (io/file attachment-path)
+        msg {:from    "frankw45@gmail.com"
+             :to      ["frankw45@gmail.com"]
+             :subject "Automated Test Results"
+             :body    [ ;; plain-text part
+                       {:type    "text/plain"
+                        :content body-text}
+                       ;; attachment part
+                       {:type      :attachment
+                        :content   report-file
+                        :file-name (.getName report-file)}]}]
+    (email/send-test-report-email smtp-opts msg)
+    (println "Email sent with attachment:" (.getName report-file))))
+
+;;====================================
 
 (defn delay-ms [ms]
   (when (pos? ms) (Thread/sleep ms)))
@@ -48,6 +76,22 @@
 
     ;; 4. Return the final path
     dest-path))
+
+;=============  upload  =========================
+
+(defn upload-file
+  "Sets the given file path into the first <input type=\"file\"> on the page,
+   bypassing the OS picker."
+  [^Page page file-path-str]
+  (let [;; build a java.nio.file.Path
+        file-path (Paths/get file-path-str (into-array String []))
+        ;; locate your file-input; narrow selector as needed
+        file-input (.locator page "input[type=file]")]
+    ;; this call will fire the same events as a user selecting the file
+    (.setInputFiles file-input (into-array java.nio.file.Path [file-path]))
+    true))
+
+;======================================
 
 
 
@@ -242,9 +286,18 @@
 
       ;====  click download button  - visible ====
       (println "file-path:: " file-path)
-      (download-and-handle page "#download-button"  (str file-path "/aaa.txt"))
-      )
+      (let [ tim   (str (ht/now))
+             testReport   "place holder for test log file"
+             downloadFileName   (str/replace (str "downloadFile-" tim ".txt") ":" "-")
+             downloadPath  (str file-path File/separator downloadFileName)
+            ]
+          (download-and-handle page "#download-button" downloadPath)
 
+          ;====  email test results  =======
+          ;====  to test email send downdown file for now dddd??? ===
+          (mail "Owl test " downloadPath)
+      )
+      )
     ;;=====================================
      ;                END
     ;;=====================================

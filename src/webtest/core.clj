@@ -4,6 +4,7 @@
             [clojure.edn :as edn]
             [clojure.pprint :refer [pprint]]
             [webtest.owl :as owl]
+            [webtest.email :as email]
             [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page Page$ScreenshotOptions
@@ -44,7 +45,7 @@
       (try
         (let [params (read-params-edn-from-root-slurp!)]
              (swap! state-atom assoc :params params)
-             (println "load-params! " params)
+             (println "load-params! " params "]n]n")
              params)
         (catch Exception e
           (println "Error loading params.edn:" (.getMessage e))
@@ -87,7 +88,33 @@
            (println "Saved screenshot to" fullpath)
            fullpath))
 
-;;;============================================================================
+
+
+;;;===============================
+
+(defn mail
+  "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
+  [body-text attachment-path]
+  (let [smtp-opts {:host "smtp.gmail.com"
+                   :port 587
+                   :user "frankw45@gmail.com"
+                   :pass "gzbd ljcs onez fouu"
+                   :tls  true}
+        report-file (io/file attachment-path)
+        msg {:from    "frankw45@gmail.com"
+             :to      ["frankw45@gmail.com"]
+             :subject "Automated Test Results"
+             :body    [ ;; plain-text part
+                       {:type    "text/plain"
+                        :content body-text}
+                       ;; attachment part
+                       {:type      :attachment
+                        :content   report-file
+                        :file-name (.getName report-file)}]}]
+    (email/send-test-report-email smtp-opts msg)
+    (println "Email sent with attachment:" (.getName report-file))))
+
+;;====================================
 
 (defn safe-text [^ElementHandle el]
       (try
@@ -141,7 +168,7 @@
                                         (when (= txt "Blink") b)))
                                (or button-handles []))]
                         (try
-                          (println "try:: blink-btn: " blink-btn " === "  (.textContent blink-btn))
+                          (println "try:: btn: === " (.textContent blink-btn))
                           (.click ^ElementHandle blink-btn)
                           (println "Clicked Blink button.")
                           (catch Exception e
@@ -367,10 +394,10 @@
                    :close close-res}}))))
 
 (defn -main [& args]
-      (println "Starting Playwright-based test...")
+      (println "\nStarting Playwright-based test...\n")
         ;;;(println "a: "  (str (ht/now)) " b: "  (str (Instant/now)))
       (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
-      (println "Time:  " (ht/time-str (ht/now)) "\n\n")
+      (println "\nTime:  " (ht/time-str (ht/now)) "\n")
 
   (load-params! state)
 
@@ -392,8 +419,9 @@
       (owl/owlTest state)
       )
     ) ; let
+
   ;;;
-  ;;;    ======== at test to only run one test  ===============
+  ;;;    ======== add custom test for Owl   ===============
   ;;;
 
   (if (not (:owlTest @state))
