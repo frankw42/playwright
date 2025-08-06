@@ -92,13 +92,13 @@
 
 ;;;===============================
 
-(defn mail
+(defn mailOld
   "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
   [body-text attachment-path]
   (let [smtp-opts {:host "smtp.gmail.com"
                    :port 587
                    :user "frankw45@gmail.com"
-                   :pass "gzbd ljcs onez fouu"
+                   :pass "gzbd ljcs onez fouu"  ;old ???
                    :tls  true}
         report-file (io/file attachment-path)
         msg {:from    "frankw45@gmail.com"
