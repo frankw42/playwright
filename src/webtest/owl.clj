@@ -17,7 +17,6 @@
 
 ;;;  ========
 ;;    ToDo:
-;;      Add upload test
 ;;      user assertion function
 ;;      gem test report log file
 ;;      email log file
@@ -88,6 +87,42 @@
 
     ;; 4. Return the final path
     dest-path))
+
+
+(defn downLoadWithTimestamp [page counter]
+  ;====  click download button  - visible ====
+  (let [tim (str (ht/now))
+        testReport "place holder for test log file"
+        downloadFileName (str counter (str/replace (str "downloadFile-" tim ".txt") ":" "-"))
+        downloadPath (str file-path File/separator downloadFileName)
+        - (println "downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
+        ]
+    (download-and-handle page "#download-button" downloadPath)
+
+    ;====  email test results  =======
+    ;====  to test email send downdown file for now dddd??? ===
+    ;;  (mail "Owl test " downloadPath)
+    )
+  )
+
+
+(defn mailReportWithAttachment [page]
+  ;====  email test report, attached report file from User Download dir ====
+  (let [tim (str (ht/now))
+        testReport "place holder for test log file"
+        attachmentFileName "smokeTestReport.txt"
+        attachmentFilePath (str file-path File/separator attachmentFileName)
+        - (println "attachmentFileName:: " attachmentFileName " attachmentFilePath: " attachmentFilePath)
+        ]
+    ;====  email test results  =======
+    ;====  to test email send downdown file for now dddd??? ===
+      (mail "Owl test " attachmentFilePath)
+    )
+  )
+
+
+
+
 
 ;=============  upload  =========================
 
@@ -268,20 +303,6 @@
                       if (a) {   a.pause();   a.currentTime = 0;  }  })")
 
 
-      ;====  click download button  - visible ====
-      (let [tim (str (ht/now))
-            testReport "place holder for test log file"
-            downloadFileName (str/replace (str "downloadFile-" tim ".txt") ":" "-")
-            downloadPath (str file-path File/separator downloadFileName)
-            - (println "downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
-            ]
-        (download-and-handle page "#download-button" downloadPath)
-
-        ;====  email test results  =======
-        ;====  to test email send downdown file for now dddd??? ===
-        (mail "Owl test " downloadPath)
-        )
-
       (delay-ms 3500)
 
       ;====  click Info button  - visible ====
@@ -296,6 +317,8 @@
 
       (delay-ms 2500)
 
+      (downLoadWithTimestamp page 3)
+
       ;====== turn on audio   ===
       (.evaluate page "( () => {  const a = document.querySelector('audio');
                       if (a) {   a.play();   a.currentTime = 0;  }  })")
@@ -305,6 +328,16 @@
       (upload-file page   "resources/owlBuddycloudinary.json")
 
       (delay-ms 2500)
+
+      ;====  click Blink button to start flipbook animation  =====
+      (extract-label-and-name page "#blink-button")
+      (delay-ms 500)
+      ;====  click Blink button to stop flipbook animation  =====
+      (extract-label-and-name page "#blink-button")
+      (delay-ms 500)
+
+
+      (downLoadWithTimestamp page 4)
 
 
       ;====  click Blink button to start flipbook animation  =====
@@ -316,47 +349,23 @@
       (delay-ms 1500)
 
 
-      (delay-ms 22500)
+      ;====  click Blink button to stop flipbook animation  =====
+      (extract-label-and-name page "#blink-button")
+      (delay-ms 500)
 
-
-
-      (println  "Is visible:: #download-button = "  (.isVisible page "#download-button") )
-      (if (not (.isVisible page "#download-button"))
-        (do
-          ;====  click Blink button to start flipbook animation  =====
-          (extract-label-and-name page "#blink-button")
-          (delay-ms 1500)
-          )
-        )
-
-      ;;;(comment
-        ;====  click download button  - visible ====
-        (let [tim (str (ht/now))
-              testReport "place holder for test log file"
-              downloadFileName (str/replace (str "downloadFile-" tim ".txt") ":" "-")
-              downloadPath (str file-path File/separator downloadFileName)
-              - (println "downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
-              ]
-          (download-and-handle page "#download-button" downloadPath)
-
-          ;====  email test results  =======
-          ;====  to test email send downdown file for now dddd??? ===
-          (mail "Owl test " downloadPath)
-          )
-
-        ;;;) ; end comment
-
+      (downLoadWithTimestamp page 5)
 
       (delay-ms 2500)
 
       ;==== select item 2 on dropdown list which is "Puppy" ===
-      ;;;;   dddd  (dropdownSelect page "#jqxImageQuery" 2)
+      (dropdownSelect page "#jqxImageQuery" 2)
 
       ;;;;;=====  start flipbook again  ===
       (extract-label-and-name page "#blink-button")
 
-      )
+      (mailReportWithAttachment page)
 
+      )
 
     ;;=====================================
      ;                END
