@@ -14,6 +14,15 @@
            (java.time Instant)
            (java.io File)))
 
+
+;;;  ========
+;;    ToDo:
+;;      Add upload test
+;;      user assertion function
+;;      gem test report log file
+;;      email log file
+;;;  =======
+
 (def file-path (Paths/get (System/getProperty "user.home")
                           (into-array String ["Downloads"])))    ;"myfile.txt"
 
@@ -55,6 +64,9 @@
 
 (defn download-and-handle
   [^Page page selector dest-path]
+
+(println  "Is visible:: " selector  " = "  (.isVisible page selector) )
+
   ;; 1. Kick off the download and wait for it to complete
   (let [download
         (.waitForDownload page
@@ -78,6 +90,10 @@
     dest-path))
 
 ;=============  upload  =========================
+
+;;   (str file-path File/separator downloadFileName) ;dddd
+; (upload-file page   "resource/owlBuddyCloudinry.json")
+;
 
 (defn upload-file
   "Sets the given file path into the first <input type=\"file\"> on the page,
@@ -245,18 +261,34 @@
       ;====  click Blink button to stop flipbook animation  =====
       (extract-label-and-name page "#blink-button")
 
-      ;====  Pause audio   ====
       (delay-ms 2500)
 
       ;; pause and rewind
       (.evaluate page "( () => {  const a = document.querySelector('audio');
                       if (a) {   a.pause();   a.currentTime = 0;  }  })")
 
+
+      ;====  click download button  - visible ====
+      (let [tim (str (ht/now))
+            testReport "place holder for test log file"
+            downloadFileName (str/replace (str "downloadFile-" tim ".txt") ":" "-")
+            downloadPath (str file-path File/separator downloadFileName)
+            - (println "downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
+            ]
+        (download-and-handle page "#download-button" downloadPath)
+
+        ;====  email test results  =======
+        ;====  to test email send downdown file for now dddd??? ===
+        (mail "Owl test " downloadPath)
+        )
+
+      (delay-ms 3500)
+
       ;====  click Info button  - visible ====
       (println " click result: "
                (extract-label-and-name page "#info-button"))
 
-      (delay-ms 5500)
+      (delay-ms 4500)
 
       ;====  click Info button  - hide ====
       (println " click result: "
@@ -264,40 +296,68 @@
 
       (delay-ms 2500)
 
-      ;==== select item 2 on dropdown list which is "Puppy" ===
-      (dropdownSelect page "#jqxImageQuery" 2)
-
-
       ;====== turn on audio   ===
       (.evaluate page "( () => {  const a = document.querySelector('audio');
                       if (a) {   a.play();   a.currentTime = 0;  }  })")
 
 
-      ;;;;;=====  start flipbook again  ===
-      (extract-label-and-name page "#blink-button")
+      ;;;;;===== upload path to owlBuddy json file   ===
+      (upload-file page   "resources/owlBuddycloudinary.json")
 
       (delay-ms 2500)
+
+
+      ;====  click Blink button to start flipbook animation  =====
+      (extract-label-and-name page "#blink-button")
+      (delay-ms 500)
 
       ;;;;;===== Click Tilt again  ===
       (extract-label-and-name page "#tilt-button")
+      (delay-ms 1500)
 
-      (delay-ms 2500)
+
+      (delay-ms 22500)
 
 
-      ;====  click download button  - visible ====
-      (println "file-path:: " file-path)
-      (let [ tim   (str (ht/now))
-             testReport   "place holder for test log file"
-             downloadFileName   (str/replace (str "downloadFile-" tim ".txt") ":" "-")
-             downloadPath  (str file-path File/separator downloadFileName)
-            ]
+
+      (println  "Is visible:: #download-button = "  (.isVisible page "#download-button") )
+      (if (not (.isVisible page "#download-button"))
+        (do
+          ;====  click Blink button to start flipbook animation  =====
+          (extract-label-and-name page "#blink-button")
+          (delay-ms 1500)
+          )
+        )
+
+      ;;;(comment
+        ;====  click download button  - visible ====
+        (let [tim (str (ht/now))
+              testReport "place holder for test log file"
+              downloadFileName (str/replace (str "downloadFile-" tim ".txt") ":" "-")
+              downloadPath (str file-path File/separator downloadFileName)
+              - (println "downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
+              ]
           (download-and-handle page "#download-button" downloadPath)
 
           ;====  email test results  =======
           ;====  to test email send downdown file for now dddd??? ===
           (mail "Owl test " downloadPath)
+          )
+
+        ;;;) ; end comment
+
+
+      (delay-ms 2500)
+
+      ;==== select item 2 on dropdown list which is "Puppy" ===
+      ;;;;   dddd  (dropdownSelect page "#jqxImageQuery" 2)
+
+      ;;;;;=====  start flipbook again  ===
+      (extract-label-and-name page "#blink-button")
+
       )
-      )
+
+
     ;;=====================================
      ;                END
     ;;=====================================
