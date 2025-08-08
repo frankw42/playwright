@@ -5,6 +5,7 @@
             [clojure.pprint :refer [pprint]]
             [webtest.owl :as owl]
             [webtest.email :as email]
+            [webtest.functionTest :as functionTest]
             [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page Page$ScreenshotOptions
@@ -418,6 +419,12 @@
       (swap! state assoc :owlTest true)
       (owl/owlTest state)
       )
+
+    (when (= param-2 "functionTest")
+      (swap! state assoc :owlTest true)
+      (functionTest/functionTest state)
+      )
+
     ) ; let
 
   ;;;

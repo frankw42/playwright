@@ -4,12 +4,14 @@
             [clojure.edn :as edn]
             [clojure.pprint :refer [pprint]]
             [webtest.email :as email]
+            [webtest.harness :as h]
             [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page Page$ScreenshotOptions
                                      Page$WaitForSelectorOptions Page$WaitForFunctionOptions
                                      Page$WaitForLoadStateOptions
                                      ElementHandle Locator)
+           [com.microsoft.playwright.assertions PlaywrightAssertions]
            (java.nio.file Paths)
            (java.time Instant)
            (java.io File)))
@@ -19,7 +21,7 @@
 ;;    ToDo:
 ;;      user assertion function
 ;;      gem test report log file
-;;      email log file
+;;      email log filey
 ;;;  =======
 
 (def file-path (Paths/get (System/getProperty "user.home")
@@ -51,6 +53,28 @@
     (println "Email sent with attachment:" (.getName report-file))))
 
 ;;====================================
+
+(defn save-failure-screenshot!
+  "Takes a Playwright `page` and saves a PNG. Returns the file path or nil.
+   Options: {:dir \"target/screenshots\" :prefix \"fail\" :full? true}"
+  [page & [{:keys [dir prefix full?]
+            :or   {dir "target/screenshots" prefix "fail" full? true}}]]
+  (let [ts       (System/currentTimeMillis)
+        file     (str dir "/" prefix "-" ts ".png")
+        path     (java.nio.file.Paths/get file (make-array String 0))]
+    (try
+      (clojure.java.io/make-parents file)
+      (.screenshot page
+                   (doto (com.microsoft.playwright.Page$ScreenshotOptions.)
+                     (.setPath path)
+                     (.setFullPage (boolean full?))))
+      (println "💾 Saved failure screenshot:" file)
+      file
+      (catch Throwable _
+        (println "⚠️  Could not save screenshot:" file)
+        nil))))
+
+;;==========================================
 
 (defn delay-ms [ms]
   (when (pos? ms) (Thread/sleep ms)))
@@ -143,7 +167,6 @@
     true))
 
 ;======================================
-
 
 
 (defn get-jqx-item-span-text
@@ -259,21 +282,55 @@
 
 
 ;;===============================================
+;;============   OWL   ==========================
+;;===============================================
+
 
 (defn owlTest [state]
      ;=======
-
-  (let [pw (Playwright/create)
+  (let [url         (get @state "url")
+        expected    (or (get @state "title") "Owl Buddy")
+        pw          (Playwright/create)
         browser-type (.chromium pw)
         launch-opts (doto (BrowserType$LaunchOptions.) (.setHeadless false))
-        browser (.launch browser-type launch-opts)
-        context (.newContext browser)
-        page (.newPage context)]
-
+        browser     (.launch browser-type launch-opts)
+        context     (.newContext browser)
+        page        (.newPage context)]
     (try
-      ;; Navigate
-      (println "url:: " (get @state "url"))
-      (.navigate page (get @state "url"))
+      (println "➡️  Navigating to:" url)
+      (.navigate page url)
+
+      ;; Playwright assertion (throws on mismatch/timeout)
+      (-> (PlaywrightAssertions/assertThat page)
+          (.hasTitle expected))
+
+      ;; Also return something useful
+      (let [actual (.title page)]
+        (println "✅ Title matched:" actual)
+        {:ok true :url url :expected expected :actual actual})
+
+      ;; Assertion failures (note: this is java.lang.AssertionError)
+      (catch AssertionError e
+        (save-failure-screenshot! page {:prefix "title-fail"})
+        (let [actual (try (.title page) (catch Throwable _ nil))]
+          (println "❌ Title mismatch.\n" (.getMessage e))
+          {:ok false :url url :expected expected :actual actual :error (.getMessage e)}))
+
+      ;; Everything else
+      (catch Throwable e
+        (save-failure-screenshot! page {:prefix "title-fail"})
+        (println "💥 Error during test:" (.getMessage e))
+        {:ok false :url url :error (.getMessage e)})
+
+      (finally
+      ;  (when page (.close page))
+      ;  (when context (.close context))
+      ;  (when browser (.close browser))
+      ;  (when pw (.close pw))
+        )
+      )
+
+  ;;================================================================
 
 
       ;==========  Select 3 images for flipbook  ============
@@ -302,7 +359,6 @@
       (.evaluate page "( () => {  const a = document.querySelector('audio');
                       if (a) {   a.pause();   a.currentTime = 0;  }  })")
 
-
       (delay-ms 3500)
 
       ;====  click Info button  - visible ====
@@ -324,7 +380,7 @@
                       if (a) {   a.play();   a.currentTime = 0;  }  })")
 
 
-      ;;;;;===== upload path to owlBuddy json file   ===
+      ;====== upload path to owlBuddy json file   ===
       (upload-file page   "resources/owlBuddycloudinary.json")
 
       (delay-ms 2500)
@@ -332,6 +388,7 @@
       ;====  click Blink button to start flipbook animation  =====
       (extract-label-and-name page "#blink-button")
       (delay-ms 500)
+
       ;====  click Blink button to stop flipbook animation  =====
       (extract-label-and-name page "#blink-button")
       (delay-ms 500)
@@ -370,4 +427,4 @@
     ;;=====================================
      ;                END
     ;;=====================================
-    ))
+    )
