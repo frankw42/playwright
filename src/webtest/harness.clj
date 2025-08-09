@@ -5,7 +5,8 @@
    - Part 3: cleanup!
    Extras: save-failure-screenshot!, append-log!"
   (:require [clojure.java.io :as io]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            )
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page$ScreenshotOptions)
            (com.microsoft.playwright.assertions PlaywrightAssertions)

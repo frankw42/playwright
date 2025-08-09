@@ -55,7 +55,7 @@
 ;; --- Helpers ---------------------------------------------------------------
 
 (defn delay-ms
-      "Blocks the current thread for `ms` milliseconds. No-op for non-positive values."
+      "Blocks the current thread for ms milliseconds. No-op for non-positive values."
       [ms]
       (when (pos? ms)
             (Thread/sleep ms)))
@@ -92,28 +92,6 @@
 
 
 ;;;===============================
-
-(defn mailOld
-  "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
-  [body-text attachment-path]
-  (let [smtp-opts {:host "smtp.gmail.com"
-                   :port 587
-                   :user "frankw45@gmail.com"
-                   :pass "gzbd ljcs onez fouu"  ;old ???
-                   :tls  true}
-        report-file (io/file attachment-path)
-        msg {:from    "frankw45@gmail.com"
-             :to      ["frankw45@gmail.com"]
-             :subject "Automated Test Results"
-             :body    [ ;; plain-text part
-                       {:type    "text/plain"
-                        :content body-text}
-                       ;; attachment part
-                       {:type      :attachment
-                        :content   report-file
-                        :file-name (.getName report-file)}]}]
-    (email/send-test-report-email smtp-opts msg)
-    (println "Email sent with attachment:" (.getName report-file))))
 
 ;;====================================
 
@@ -395,8 +373,7 @@
                    :close close-res}}))))
 
 (defn -main [& args]
-      (println "\nStarting Playwright-based test...\n")
-        ;;;(println "a: "  (str (ht/now)) " b: "  (str (Instant/now)))
+      (print "\nStarting Playwright-based test...  ")
       (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
       (println "\nTime:  " (ht/time-str (ht/now)) "\n")
 

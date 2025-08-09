@@ -32,7 +32,7 @@
 
 (defn mail
   "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
-  [body-text attachment-path]
+  [subject body-text attachment-path]
   (let [smtp-opts {:host "smtp.gmail.com"
                    :port 587
                    :user "frankw45@gmail.com"
@@ -41,7 +41,7 @@
         report-file (io/file attachment-path)
         msg {:from    "frankw45@gmail.com"
              :to      ["frankw45@gmail.com"]
-             :subject "Automated Test Results"
+             :subject subject
              :body    [ ;; plain-text part
                        {:type    "text/plain"
                         :content body-text}
@@ -169,6 +169,9 @@
 ;======================================
 
 
+;====================================================
+
+
 (defn get-jqx-item-span-text
   [^Page page key]
   (let [loc (.locator page key)]  ;; "div#listitem1innerListBoxjqxImageQuery span"
@@ -183,20 +186,21 @@
   [^Page page key i & {:keys [timeout-ms] :or {timeout-ms 5000}}]
   ;; 1) Open the dropdown
   (.click page key)
-  ;; 2) Wait for the second item’s div to appear
+  ;; 2) Wait for the item’s div to appear
   (let [item-selector  (str "#listitem"  i  "innerListBoxjqxImageQuery")
         - (println "item selector:: "    item-selector)
         opts          (doto (Page$WaitForSelectorOptions.) (.setTimeout timeout-ms))
         handle        (.waitForSelector page item-selector opts)]
     (when handle
-      (delay-ms 2000)
+      (delay-ms 1000)
       (println "get item span text:: "
       (get-jqx-item-span-text page (str "div#listitem" i  "innerListBoxjqxImageQuery span") ))
 
-      (delay-ms 2000)
+      (delay-ms 1000)
 
       ;; 3) Click it
       (.click page item-selector)
+
       true)))
 
 
@@ -341,7 +345,8 @@
         (delay-ms 1000)
         )
       (delay-ms 500)
-
+    (comment
+      ;@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
       ;====  click Blink button to start flipbook animation  =====
       (extract-label-and-name page "#blink-button")
       (delay-ms 5500)
@@ -381,7 +386,7 @@
 
 
       ;====== upload path to owlBuddy json file   ===
-      (upload-file page   "resources/owlBuddycloudinary.json")
+      (upload-file page "resources/owlBuddycloudinary.json")
 
       (delay-ms 2500)
 
@@ -414,8 +419,17 @@
 
       (delay-ms 2500)
 
+      ) ; end commend  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
       ;==== select item 2 on dropdown list which is "Puppy" ===
+    (comment
+      (println "2")
       (dropdownSelect page "#jqxImageQuery" 2)
+      (println "3")
+      (dropdownSelect page "#jqxImageQuery" 3)
+      (println "3\3")
+      (dropdownSelect page "#jqxImageQuery" 4)
+      ) ; comment
 
       ;;;;;=====  start flipbook again  ===
       (extract-label-and-name page "#blink-button")
