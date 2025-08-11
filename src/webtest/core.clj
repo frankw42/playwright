@@ -46,7 +46,7 @@
       (try
         (let [params (read-params-edn-from-root-slurp!)]
              (swap! state-atom assoc :params params)
-             (println "load-params! " params "]n]n")
+             (println "load-params! from file::\n " params "\n\n")
              params)
         (catch Exception e
           (println "Error loading params.edn:" (.getMessage e))
@@ -380,7 +380,7 @@
   (load-params! state)
 
   (let [[param-1 param-2 & rest] args]
-    (println "param-1:" param-1 "param-2:" param-2 "others:" rest "\n")
+    (println "Command line param-1:" param-1 "param-2:" param-2 "others:" rest "\n")
     (if param-1
       (let [firstSavedUrl (get-in @state [:params (str param-1)])]
         (println "firstSavedUrl: " firstSavedUrl)

@@ -40,12 +40,15 @@
 
 
 (defn title-step [{:keys [state page]}]
-  (let [expected (or (get @state "title") "Owl Buddy")]
+ ; (println "title: " (get state "title"))
+ ; (println "page: " page)
+
+  (let [expected (or (get state "title") "Owl Buddy")]
     (-> (com.microsoft.playwright.assertions.PlaywrightAssertions/assertThat page)
         (.hasTitle expected))
     {:actual-title (.title page)}))
 
-;=====================================
+;====================================================
 ;====================================================
 
 (defn dropdown-item-texts
@@ -131,9 +134,16 @@
 
 (defn anyOne [txt] (contains? #{"Blink" "- Tilt -"  ""} txt))
 
+
+
 ;=================================================
 ;;==  find the button and click  ====  dddd
-(defn extract-label-and-name [^Page page key]
+
+(defn extract-label-and-nameOld [^Page page key]
+  (println "extract-label-and-name:  page:  "  page)
+  (println "extract-label-and-name:  key:  "  key)
+
+
   (let [
         button-loc (.locator page key )   ;;===== "button")
         button-handles (try (seq (.elementHandles button-loc)) (catch Exception _ nil))
@@ -153,6 +163,25 @@
                 (println "Failed to click button:" (.getMessage e)))))
         ]
     ))
+
+
+;====================================
+
+(defn extract-label-and-name [^Page page key]
+  (let [
+        button-loc (.locator page key )
+        button-handles (try (seq (.elementHandles button-loc)) (catch Exception _ nil))
+        btn (first button-handles)
+          -  (try
+              (println "try:: Click Button:: === " (.textContent btn))
+              (.click ^ElementHandle btn)
+              (println "Clicked button.")
+              (catch Exception e
+                (println "Failed to click button:" (.getMessage e))))
+        ]
+    ))
+
+;====================================
 
 
 (defn make-extract-click-button
@@ -186,7 +215,7 @@
 
   [^Page page dropdownSelector  idAfterOpen ii & {:keys [timeout-ms] :or {timeout-ms 5000}}]
   (let [widget-sel dropdownSelector            ;;;;=====  ".jqx-dropdownlist"
-        - (println "page: " page)
+       ; - (println "page: " page)
         - (println "widget-sel: " widget-sel)
         ;; attempt to get the widget, but catch any timeout or other errors
         widget
@@ -237,62 +266,64 @@
                              {:found true}
                              {:found false :reason "Content missing"})
                    :close close-res}}))))
+;;===============================================
 
-;;;;;;;======
-
+;
+;===========   Start of Test Suite   =============
+;
 
 (defn functionTest [mainState]
      ;============
-  (println "*** functionTest")
-  (println "functionTest::  url: "   (get  @mainState "url"))
 
-  (h/setup! mainState {:headless? false :browser :chromium})
+  (let [p (:params @mainState)]
+    (println "\n*** Suite Name:: " (p "suiteName"))
 
-  (println "➡️  Navigating to:"  (get  @mainState "url"))
-  (.navigate (get @mainState "page")  (get  @mainState "url"))
-  (Thread/sleep 3000)
-  ;; Playwright assertion (throws on mismatch/timeout)
-  (-> (PlaywrightAssertions/assertThat (get @mainState "page"))
-      (.hasTitle "Owl Buddy"))
+    ;=============   setup   ================================
 
-  (h/run-test! state "Title should be Owl Buddy" title-step)
+    (h/setup! mainState {:headless? false :browser :chromium})
+    (println)
+    (println "➡️  Navigating to:" (p "url"))
+    (.navigate (get @mainState "page") (p "url"))
+    (Thread/sleep 3000)
 
-  (doseq [ii [0 1 2 3]]
-    (println "doseq:: " ii " page: " (get @mainState "page"))
-             (toggle-jqx-dropdown-with-check (get @mainState "page") "#jqxImageQuery" "#dropdownlistContentjqxImageQuery" ii)
-    (Thread/sleep 1000)
-    )
-   ;;; start flipbook
-  (extract-label-and-name (get @mainState "page") "#blink-button")
-  (Thread/sleep 3000)
-  ;;; stop flipbook
-  (extract-label-and-name (get @mainState "page") "#blink-button")
-  (Thread/sleep 1000)
-  ;;; show Info
-  ;(extract-label-and-name (get @mainState "page") "#info-button")
-  (.click (.locator (get @mainState "page") "#info-button"))
-  (Thread/sleep 4000)
-  ;;; hide info
-  (.click (.locator (get @mainState "page") "#info-button"))
- ; (extract-label-and-name (get @mainState "page") "#info-button")
-  (Thread/sleep 2000)
+   ;;--- needs mainState and change to take a title  dddd ?????
+    (h/run-test! mainState "Title should be Owl Buddy" title-step)
 
+    (doseq [ii [0 1 2 3]]
+      (println "doseq:: " ii )   ;;  " page: " (get @mainState "page"))
+      (toggle-jqx-dropdown-with-check (get @mainState "page") "#jqxImageQuery" "#dropdownlistContentjqxImageQuery" ii)
+      (Thread/sleep 1000)
+      )                    ;;works (extract-label-and-name (get @mainState "page") "#blink-button")  ; "start flipbook"
+
+    (h/run-test! mainState "Start flipbook" "#blink-button" extract-label-and-name)
+    (Thread/sleep 3000)
+
+    (h/run-test! mainState "Stop flipbook" "#blink-button" extract-label-and-name)
+    (Thread/sleep 2000)
+
+    (h/run-test! mainState "Show Info" "#info-button" extract-label-and-name)
+    (Thread/sleep 4000)
+
+    (h/run-test! mainState "Hide Info" "#info-button" extract-label-and-name)
+    (Thread/sleep 2000)
 
 
 
 
-  ;;; not good ????
-  ;(h/run-test! mainState "Extract click info button" (make-extract-click-button "#info-button"))
-  ;(Thread/sleep 3000)
-  ;(h/run-test! mainState "Extract click info button" (make-extract-click-button "#info-button"))
+
+    ;;; not good ????
+    ;(h/run-test! mainState "Extract click info button" (make-extract-click-button "#info-button"))
+    ;(Thread/sleep 3000)
+    ;(h/run-test! mainState "Extract click info button" (make-extract-click-button "#info-button"))
 
 
-  ;(h/run-test! mainState (format "Pick item #%d" 1) (make-dropdown-test 1 :timeout-ms 8000))
+    ;(h/run-test! mainState (format "Pick item #%d" 1) (make-dropdown-test 1 :timeout-ms 8000))
 
- ;; (h/run-test! state "Extract click button" (make-extract-click-button "#info-button"))
+    ;; (h/run-test! state "Extract click button" (make-extract-click-button "#info-button"))
 
 
-  ; (h/cleanup! state)
+    ; (h/cleanup! state)
+    ) ; end let
 )
 
 

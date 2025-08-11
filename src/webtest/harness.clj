@@ -69,7 +69,88 @@
 
 ;; ---------- Part 2: run one test ----------
 
+
 (defn run-test!
+  "Arity 3:  state test-name f
+     f gets {:state :pw :browser :context :page}
+   Arity 4:  state test-name selector action-fn
+     action-fn is (fn [page sel] ...)"
+
+  ;; --- Arity 3 (back-compat) ---
+  ([state test-name f]
+   (let [{:strs [pw browser context page url]} @state
+         dummy1 (println "page: " page)
+         dummy2 (println "url: " url)
+         n        (get (swap! state update "test-ctr" (fnil inc 0)) "test-ctr")
+         test-id  (format "%03d-%s" (long n)
+                          (-> (or test-name "unnamed")
+                              str/trim
+                              (str/replace #"\s+" "-")))
+         start-ns (System/nanoTime)
+         started  (java.time.Instant/now)]
+
+     (println "test-id: " test-id)
+     (try
+      ; (when url
+      ;   (println "[NAV ]" url)
+      ;   (.navigate page url))
+       (let [payload (f {:state state :pw pw :browser browser :context context :page page})
+             ended   (java.time.Instant/now)
+             dur-ms  (long (/ (- (System/nanoTime) start-ns) 1e6))
+             res     (merge {:id test-id :name test-name :ok true :url url
+                             :started (str started) :ended (str ended)
+                             :duration-ms dur-ms}
+                            (when (map? payload) payload))]
+         (append-log! res)
+         (println "[OK  ]" test-id "-" test-name)
+         res)
+       (catch AssertionError e
+         (let [shot (save-failure-screenshot! page {:prefix test-id})
+               ended (java.time.Instant/now)
+               dur-ms (long (/ (- (System/nanoTime) start-ns) 1e6))
+               res  {:id test-id :name test-name :ok false :url url
+                     :error (.getMessage e) :started (str started)
+                     :ended (str ended) :duration-ms dur-ms
+                     :screenshot shot :class "AssertionError"}]
+           (append-log! res)
+           (println "[FAIL]" test-id "-" test-name "\n" (.getMessage e))
+           res))
+       (catch Throwable e
+         (let [shot (save-failure-screenshot! page {:prefix test-id})
+               ended (java.time.Instant/now)
+               dur-ms (long (/ (- (System/nanoTime) start-ns) 1e6))
+               res  {:id test-id :name test-name :ok false :url url
+                     :error (.getMessage e) :started (str started)
+                     :ended (str ended) :duration-ms dur-ms
+                     :screenshot shot :class (.getName (class e))}]
+           (append-log! res)
+           (println "[ERR ]" test-id "-" test-name "\n" (.getMessage e))
+           res)))))
+
+  ;; --- Arity 4 (selector + action) ---
+  ([state test-name selector action-fn]
+   (println "arity 4: " selector)
+   (run-test! state test-name
+              (fn [{:keys [page]}]
+                (action-fn page selector))
+              )
+   )
+  )
+
+;;-----------   helper   --------------------
+
+
+(defn run-click!
+  [state test-name selector]
+  (run-test! state test-name selector
+             (fn [page sel]
+               (.click (.locator page sel))
+               {:action "click" :selector sel})))
+
+
+;;---------- END  Part 2 run one test  ------
+
+(defn run-test!OLd
   "Run a named test function `f` that receives {:state :pw :browser :context :page}.
    - Increments \"test-ctr\" in state and prefixes it to the test id.
    - Navigates to (get @state \"url\") if present.
@@ -77,6 +158,7 @@
    - Writes one EDN line per test to target/test-log.edn.
    Returns the result map."
   [state test-name f]
+  (println "run:: state: " state " test-name: " test-name " f: " f)
   (let [{:strs [pw browser context page url]} @state
         n        (get (swap! state update "test-ctr" (fnil inc 0)) "test-ctr")
         test-id  (format "%03d-%s" (long n)
