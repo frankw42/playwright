@@ -40,10 +40,11 @@
 
 
 (defn title-step [{:keys [state page]}]
- ; (println "title: " (get state "title"))
- ; (println "page: " page)
+  (println "params: " (get @state :params))
+  (println "title: " (get (:params @state) "title"))
+  (println "page: " page)
 
-  (let [expected (or (get state "title") "Owl Buddy")]
+  (let [expected (or (get @state "title") "Owl Buddy")]
     (-> (com.microsoft.playwright.assertions.PlaywrightAssertions/assertThat page)
         (.hasTitle expected))
     {:actual-title (.title page)}))
@@ -130,19 +131,13 @@
 
 ;;;;;;;;;================================================
 
-
-
 (defn anyOne [txt] (contains? #{"Blink" "- Tilt -"  ""} txt))
-
-
-
 ;=================================================
 ;;==  find the button and click  ====  dddd
 
 (defn extract-label-and-nameOld [^Page page key]
   (println "extract-label-and-name:  page:  "  page)
   (println "extract-label-and-name:  key:  "  key)
-
 
   (let [
         button-loc (.locator page key )   ;;===== "button")
@@ -180,7 +175,6 @@
                 (println "Failed to click button:" (.getMessage e))))
         ]
     ))
-
 ;====================================
 
 
@@ -209,12 +203,9 @@
 ;;;;;========
 
 (defn toggle-jqx-dropdown-with-check
-  "Attempts to click the first `.jqx-dropdownlist` to open, waits 500ms,
-   checks for `#dropdownlistContentjqxImageQuery`, then clicks again to close.
-   Catches all exceptions; returns a map summarizing what succeeded/failed."
 
   [^Page page dropdownSelector  idAfterOpen ii & {:keys [timeout-ms] :or {timeout-ms 5000}}]
-  (let [widget-sel dropdownSelector            ;;;;=====  ".jqx-dropdownlist"
+  (let [widget-sel dropdownSelector
        ; - (println "page: " page)
         - (println "widget-sel: " widget-sel)
         ;; attempt to get the widget, but catch any timeout or other errors
@@ -286,11 +277,11 @@
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)
 
-   ;;--- needs mainState and change to take a title  dddd ?????
+   ;;--- needs mainState and change to take a title (title in params  dddd ?????
     (h/run-test! mainState "Title should be Owl Buddy" title-step)
 
     (doseq [ii [0 1 2 3]]
-      (println "doseq:: " ii )   ;;  " page: " (get @mainState "page"))
+      (println "doseq:: " ii )
       (toggle-jqx-dropdown-with-check (get @mainState "page") "#jqxImageQuery" "#dropdownlistContentjqxImageQuery" ii)
       (Thread/sleep 1000)
       )                    ;;works (extract-label-and-name (get @mainState "page") "#blink-button")  ; "start flipbook"
@@ -307,6 +298,8 @@
     (h/run-test! mainState "Hide Info" "#info-button" extract-label-and-name)
     (Thread/sleep 2000)
 
+
+    (h/run-click-handle!  mainState "Start flipbook"  "#blink-button")
 
 
 

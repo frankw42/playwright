@@ -11,7 +11,12 @@
                                      Page$ScreenshotOptions)
            (com.microsoft.playwright.assertions PlaywrightAssertions)
            (java.nio.file Paths)
-           (java.time Instant)))
+           (java.time Instant))
+
+  (:import [com.microsoft.playwright Page]
+           [com.microsoft.playwright.options WaitForSelectorState]
+           [com.microsoft.playwright Page$WaitForSelectorOptions])
+  )
 
 ;; ---------- Extras ----------
 
@@ -93,7 +98,7 @@
      (try
       ; (when url
       ;   (println "[NAV ]" url)
-      ;   (.navigate page url))
+       ;  (.navigate page url))
        (let [payload (f {:state state :pw pw :browser browser :context context :page page})
              ended   (java.time.Instant/now)
              dur-ms  (long (/ (- (System/nanoTime) start-ns) 1e6))
@@ -139,73 +144,24 @@
 
 ;;-----------   helper   --------------------
 
-
-(defn run-click!
+(defn run-click-handle!
   [state test-name selector]
   (run-test! state test-name selector
              (fn [page sel]
-               (.click (.locator page sel))
-               {:action "click" :selector sel})))
+               (let [h (.waitForSelector page sel)]     ;; ElementHandle or nil
+                 (when (nil? h)
+                   (throw (ex-info "Selector not found" {:selector sel})))
+                 (try
+                   (.scrollIntoViewIfNeeded h)
+                   (.click h)
+                   {:action "click-handle" :selector sel}
+                   (finally
+                     (when h
+                       (.dispose h))))))))
 
 
-;;---------- END  Part 2 run one test  ------
+  ;;---------- END  Part 2 run one test  ------
 
-(defn run-test!OLd
-  "Run a named test function `f` that receives {:state :pw :browser :context :page}.
-   - Increments \"test-ctr\" in state and prefixes it to the test id.
-   - Navigates to (get @state \"url\") if present.
-   - Catches AssertionError (for Playwright asserts) and Throwable.
-   - Writes one EDN line per test to target/test-log.edn.
-   Returns the result map."
-  [state test-name f]
-  (println "run:: state: " state " test-name: " test-name " f: " f)
-  (let [{:strs [pw browser context page url]} @state
-        n        (get (swap! state update "test-ctr" (fnil inc 0)) "test-ctr")
-        test-id  (format "%03d-%s" (long n)
-                         (-> (or test-name "unnamed")
-                             str/trim
-                             (str/replace #"\s+" "-")))
-        start-ns (System/nanoTime)
-        started  (Instant/now)]
-    (try
-      (when url
-        (println "[NAV ]" url)
-        (.navigate page url))
-      ;; Execute user-provided test function
-      (let [payload (f {:state state :pw pw :browser browser :context context :page page})
-            ended   (Instant/now)
-            dur-ms  (long (/ (- (System/nanoTime) start-ns) 1e6))
-            res     (merge {:id test-id :name test-name :ok true :url url
-                            :started (str started) :ended (str ended)
-                            :duration-ms dur-ms}
-                           (when (map? payload) payload))]
-        (append-log! res)
-        (println "[OK  ]" test-id "-" test-name)
-        res)
-
-      (catch AssertionError e
-        (let [shot (save-failure-screenshot! page {:prefix test-id})
-              ended (Instant/now)
-              dur-ms (long (/ (- (System/nanoTime) start-ns) 1e6))
-              res  {:id test-id :name test-name :ok false :url url
-                    :error (.getMessage e) :started (str started)
-                    :ended (str ended) :duration-ms dur-ms
-                    :screenshot shot :class "AssertionError"}]
-          (append-log! res)
-          (println "[FAIL]" test-id "-" test-name "\n" (.getMessage e))
-          res))
-
-      (catch Throwable e
-        (let [shot (save-failure-screenshot! page {:prefix test-id})
-              ended (Instant/now)
-              dur-ms (long (/ (- (System/nanoTime) start-ns) 1e6))
-              res  {:id test-id :name test-name :ok false :url url
-                    :error (.getMessage e) :started (str started)
-                    :ended (str ended) :duration-ms dur-ms
-                    :screenshot shot :class (.getName (class e))}]
-          (append-log! res)
-          (println "[ERR ]" test-id "-" test-name "\n" (.getMessage e))
-          res)))))
 
 ;; ---------- Part 3: cleanup ----------
 
