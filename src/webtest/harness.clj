@@ -55,12 +55,6 @@
     (into (sorted-map-by cmp) m)))
 
 
-(defn append-log! [m]
-  (io/make-parents log-file)                      ;; ensures target/ exists
-  (spit log-file (str (pr-str (id-first-map m)) "\n") :append true))
-
-
-
 ;; ---------- Part 1: setup ----------
 
 (defn setup!
@@ -101,12 +95,49 @@
     (alter-var-root #'*run-log-file* (constantly f))
     (.getAbsolutePath f)))
 
-(defn append-log! [m]
-  (let [f (or *run-log-file* (dl/timestamped-path "test-log.edn"))
-        n (next-num!)
-        line (str (pr-str (into (array-map :id n) m)) "\n")]
-    (spit f line :append true)
-    (.getAbsolutePath f)))
+;;====
+
+(defn append-log!
+"Append one EDN map per line to a single log file per run.
+ Lazily picks a log path on first use, caches it in state (\"log-file\")
+ and *run-log-file*. Orders keys before writing."
+([m] (append-log! nil m))
+([state m]
+ (let [;; choose (or create) the run's single log file
+       log-path
+       (or (some-> state deref (get "log-file"))
+           (some-> *run-log-file* .getAbsolutePath)
+           (let [f (dl/timestamped-path "test-log.edn")]
+             (io/make-parents f)
+             (when state (swap! state assoc "log-file" (.getAbsolutePath f)))
+             (alter-var-root #'*run-log-file* (constantly f))
+             (.getAbsolutePath f)))
+       f (io/file log-path)
+
+       ;; ensure :id exists for this line
+       n      (next-num!)
+       to-log (assoc m :id n)
+
+       ;; ORDERING: put these first (in this order), then any remaining keys alphabetically
+       key-order [:id :name :ok]   ;; <-- edit this vector if you want a different fixed order
+       preferred (filter #(contains? to-log %) key-order)
+       rest-ks   (->> (keys to-log)
+                      (remove (set preferred))
+                      (sort-by (fn [k]
+                                 (cond
+                                   (keyword? k) (name k)
+                                   (string? k)  k
+                                   :else        (str k)))))
+
+       ;; build an insertion-ordered map for stable printing
+       lhm (java.util.LinkedHashMap.)]
+   (doseq [k (concat preferred rest-ks)]
+     (.put lhm k (get to-log k)))
+   (spit f (str (pr-str lhm) "\n") :append true)
+   log-path)))
+
+;;=====
+
 
 ;; ---------- failure screenshot ----------
 (defn- save-failure-screenshot! [page {:keys [prefix] :or {prefix "fail"}}]
@@ -135,7 +166,7 @@
                              :url (.url page) :started (str started)
                              :ended (str ended) :duration-ms dur-ms}
                             (when (map? payload) payload))]
-         (append-log! res)
+         (append-log! state res)
          (println "[OK  ]" test-id "-" test-name)
          res)
        (catch AssertionError e
@@ -146,7 +177,7 @@
                      :error (.getMessage e) :started (str started)
                      :ended (str ended) :duration-ms dur-ms
                      :screenshot shot :class "AssertionError"}]
-           (append-log! res)
+           (append-log! state res)
            (println "[FAIL]" test-id "-" test-name "\n" (.getMessage e))
            res))
        (catch Throwable e
@@ -157,7 +188,7 @@
                      :error (.getMessage e) :started (str started)
                      :ended (str ended) :duration-ms dur-ms
                      :screenshot shot :class (.getName (class e))}]
-           (append-log! res)
+           (append-log! state res)
            (println "[ERR ]" test-id "-" test-name "\n" (.getMessage e))
            res)))))
 
@@ -181,73 +212,6 @@
 
 ;;======================================================
 
-
-(defn run-test!Old
-  "Arity 3:  state test-name f
-     f gets {:state :pw :browser :context :page}
-   Arity 4:  state test-name selector action-fn
-     action-fn is (fn [page sel] ...)"
-
-  ;; --- Arity 3 (back-compat) ---
-  ([state test-name f]
-   (let [{:strs [pw browser context page url]} @state
-         dummy1 (println "page: " page)
-         dummy2 (println "url: " url)
-         n        (get (swap! state update "test-ctr" (fnil inc 0)) "test-ctr")
-         test-id  (format "%03d-%s" (long n)
-                          (-> (or test-name "unnamed")
-                              str/trim
-                              (str/replace #"\s+" "-")))
-         start-ns (System/nanoTime)
-         started  (java.time.Instant/now)]
-
-     (println "test-id: " test-id)
-     (try
-      ; (when url
-      ;   (println "[NAV ]" url)
-       ;  (.navigate page url))
-       (let [payload (f {:state state :pw pw :browser browser :context context :page page})
-             ended   (java.time.Instant/now)
-             dur-ms  (long (/ (- (System/nanoTime) start-ns) 1e6))
-             res     (merge {:id test-id :name test-name :ok true :url url
-                             :started (str started) :ended (str ended)
-                             :duration-ms dur-ms}
-                            (when (map? payload) payload))]
-         (append-log! res)
-         (println "[OK  ]" test-id "-" test-name)
-         res)
-       (catch AssertionError e
-         (let [shot (save-failure-screenshot! page {:prefix test-id})
-               ended (java.time.Instant/now)
-               dur-ms (long (/ (- (System/nanoTime) start-ns) 1e6))
-               res  {:id test-id :name test-name :ok false :url url
-                     :error (.getMessage e) :started (str started)
-                     :ended (str ended) :duration-ms dur-ms
-                     :screenshot shot :class "AssertionError"}]
-           (append-log! res)
-           (println "[FAIL]" test-id "-" test-name "\n" (.getMessage e))
-           res))
-       (catch Throwable e
-         (let [shot (save-failure-screenshot! page {:prefix test-id})
-               ended (java.time.Instant/now)
-               dur-ms (long (/ (- (System/nanoTime) start-ns) 1e6))
-               res  {:id test-id :name test-name :ok false :url url
-                     :error (.getMessage e) :started (str started)
-                     :ended (str ended) :duration-ms dur-ms
-                     :screenshot shot :class (.getName (class e))}]
-           (append-log! res)
-           (println "[ERR ]" test-id "-" test-name "\n" (.getMessage e))
-           res)))))
-
-  ;; --- Arity 4 (selector + action) ---
-  ([state test-name selector action-fn]
-   (println "arity 4: " selector)
-   (run-test! state test-name
-              (fn [{:keys [page]}]
-                (action-fn page selector))
-              )
-   )
-  )
 
 ;;-----------   helper   --------------------
 
