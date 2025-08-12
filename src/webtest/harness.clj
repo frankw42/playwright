@@ -320,40 +320,13 @@
                 :open open-sel :panel panel-sel :option option-sel})))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ;; ---------- Part 3: cleanup ----------
 
 (defn cleanup!
   "Close page/context/browser/pw found in `state` and remove them from state.
    Returns the updated state map."
   [state]
+    ;(println "state:::  " state)
   (let [{:strs [page context browser pw]} @state]
     (try (when page (.close page)) (catch Throwable _))
     (try (when context (.close context)) (catch Throwable _))

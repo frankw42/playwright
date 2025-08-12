@@ -31,9 +31,37 @@
      )
   )
 
-;==============   uplod   ==============================
+;==============   upload   ==============================
+"Sets the given file path into the first <input type=\"file\"> on the page,
+ bypassing the OS picker."
 
-(defn upload-file
+(defn upload-file [^com.microsoft.playwright.Page page file-path-str]
+  (let [file-path (java.nio.file.Paths/get file-path-str (into-array String []))
+        file-input (.locator page "input[type=file]")]
+    (.setInputFiles file-input (into-array java.nio.file.Path [file-path]))
+    true))
+
+;---------------------------------------------------------
+
+(defn make-upload-step
+  "Returns a step fn for h/run-test!. It uses the first <input type=file> on the page.
+   res-path is a fully-resolved path string (or however you resolve it upstream)."
+  [page res-path]
+  (fn [par]  ;  [{:keys [state]}]
+    (println "fn: path: "  res-path)
+    (let [ok? (upload-file page res-path)
+          - (println "ok? " ok?)
+          input (.locator page "input[type=file]")
+          dom-name (.evaluate input "(el)=> el && el.files && el.files[0] ? el.files[0].name : null")]
+      {:step :upload-test-step
+       :path res-path
+       :dom-file-name (when dom-name (str dom-name))
+       :ok (and ok? (boolean dom-name))})))
+
+
+;=========================================================================
+
+(defn upload-fileOld
   "Sets the given file path into the first <input type=\"file\"> on the page,
    bypassing the OS picker."
   [^Page page file-path-str]
@@ -301,17 +329,24 @@
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)
 
-   ;;--- needs mainState and change to take a title (title in params  dddd ?????
     (h/run-test! mainState "Title should be Owl Buddy" title-step)
     (Thread/sleep 1000)
 
-    (upload-file  (get @mainState "page") "resources/owlBuddycloudinary.json")
+
+    (let [res-path "resources/owlBuddycloudinary.json"]      ;; or an absolute path you built earlier
+      (h/run-test! mainState (str "upload:" res-path)
+                   (make-upload-step (get @mainState "page") res-path)))
     (Thread/sleep 1000)
 
+    (h/run-test! mainState "Start flipbook" "#blink-button" extract-label-and-name)
+    (Thread/sleep 3000)
+
+    (h/run-test! mainState "Stop flipbook" "#blink-button" extract-label-and-name)
+    (Thread/sleep 8000)
 
     (h/run-test! mainState "download-test-step" download-test-step)
 
-    ;(doseq [ii [0 1 2 3]] (println "doseq:: " ii )
+    ;(doseq [ii [0 1 2 3]] (println "doseq:: " ii )  ; OLD
     ;  (toggle-jqx-dropdown-with-check (get @mainState "page") "#jqxImageQuery" "#dropdownlistContentjqxImageQuery" ii)
     ; (Thread/sleep 1000))
 
@@ -336,17 +371,19 @@
     (h/run-test! mainState "Stop flipbook" "#blink-button" extract-label-and-name)
     (Thread/sleep 8000)
 
-    (h/run-test! mainState "download-test-step" download-test-step)
-
     (h/run-test! mainState "Show Info" "#info-button" extract-label-and-name)
     (Thread/sleep 4000)
 
     (h/run-test! mainState "Hide Info" "#info-button" extract-label-and-name)
     (Thread/sleep 2000)
 
+    ;--- note  precondition: download button must be clickable - clickable
+    (h/run-test! mainState "download-test-step" download-test-step)
+    (Thread/sleep 2000)
 
     (h/run-click-handle!  mainState "Start flipbook"  "#blink-button")
     (Thread/sleep 2000)
+
 
     (doseq [ii [0 1 2 3]] (println "image doseq:: " ii )
       (let [open   "#jqxImageQuery"
@@ -360,10 +397,10 @@
           panel  "#dropdownlistContentjqxMusicQuery"
           option (format "#listitem%dinnerListBoxjqxMusicQuery" ii)]
       (h/run-dropdown-select-handle! mainState "select music" open panel option))
-      (Thread/sleep 4000))
+      (Thread/sleep 8000))
 
 
-    ; (h/cleanup! state)
+     (h/cleanup! mainState)
     ) ; end let
 )
 
