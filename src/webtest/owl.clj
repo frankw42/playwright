@@ -87,7 +87,6 @@
 
 (defn download-and-handle
   [^Page page selector dest-path]
-
 (println  "Is visible:: " selector  " = "  (.isVisible page selector) )
 
   ;; 1. Kick off the download and wait for it to complete
@@ -117,7 +116,7 @@
   ;====  click download button  - visible ====
   (let [tim (str (ht/now))
         testReport "place holder for test log file"
-        downloadFileName (str counter (str/replace (str "downloadFile-" tim ".txt") ":" "-"))
+        downloadFileName (str counter "-" (str/replace (str "downloadFile-" tim ".txt") ":" "-"))
         downloadPath (str file-path File/separator downloadFileName)
         - (println "downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
         ]

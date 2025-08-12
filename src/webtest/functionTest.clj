@@ -5,6 +5,9 @@
             [clojure.pprint :refer [pprint]]
             [webtest.email :as email]
             [webtest.harness :as h]
+            [java-time.api :as jt]
+            [clojure.pprint :as pprint]
+            [webtest.download :as dl]
             [hello-time :as ht])
   (:import
     com.microsoft.playwright.Page
@@ -19,6 +22,13 @@
     java.io.File)
 
   (:import [com.microsoft.playwright Page ElementHandle])
+
+  (:import
+    (com.microsoft.playwright Page)
+     ;;;;  (com.microsoft.playwright.options WaitUntil State)
+    (com.microsoft.playwright.options LoadState WaitUntilState)
+    (com.microsoft.playwright.options LoadState)
+     )
   )
 
 
@@ -26,13 +36,6 @@
   (try
     (some-> (.textContent el) str/trim)
     (catch Exception _ nil)))
-
-(defn get-jqx-item-span-textold
-  [^Page page key]
-  (let [loc (.locator page key)]  ;; "div#listitem1innerListBoxjqxImageQuery span"
-    (when (pos? (.count loc))
-      (str/trim (.textContent loc)))))
-
 
 
 (def state (atom {"url" "https://frankw42.github.io/public/index.html"
@@ -49,8 +52,13 @@
         (.hasTitle expected))
     {:actual-title (.title page)}))
 
+;==============   New Download   ======================================
+
+
+
 ;====================================================
-;====================================================
+
+
 
 (defn dropdown-item-texts
   [^com.microsoft.playwright.Page page & {:keys [timeout-ms] :or {timeout-ms 8000}}]
@@ -117,50 +125,12 @@
       (catch Throwable t
         {:ok? false :selector item-selector :text nil :error t}))))
 
-;;;;;;;;;============================================
 
-(defn make-dropdown-test [i & {:keys [timeout-ms] :or {timeout-ms 5000}}]
-  (fn [{:keys [^Page page]}]
-    (let [{:keys [ok? selector text error]} (dropdown-select! page i :timeout-ms timeout-ms)]
-      {:ok ok?
-       :step "dropdown-select"
-       :i i
-       :selector selector
-       :text text
-       :error (some-> error ex-message)})))
-
-;;;;;;;;;================================================
+;===========================================
 
 (defn anyOne [txt] (contains? #{"Blink" "- Tilt -"  ""} txt))
-;=================================================
-;;==  find the button and click  ====  dddd
 
-(defn extract-label-and-nameOld [^Page page key]
-  (println "extract-label-and-name:  page:  "  page)
-  (println "extract-label-and-name:  key:  "  key)
-
-  (let [
-        button-loc (.locator page key )   ;;===== "button")
-        button-handles (try (seq (.elementHandles button-loc)) (catch Exception _ nil))
-        - (println "button-handles: " (count button-handles)      )
-        ;; click the first button whose visible text (trimmed) is exactly "Blink"
-        - (when-let [btn
-                     (some (fn [^ElementHandle b]
-                             (let [txt (some-> (safe-text b) str/trim)]
-                               (println "txt: " txt)
-                               (when (anyOne txt) b)))
-                           (or button-handles []))]
-            (try
-              (println "try:: Click Button:: " btn " === "  (.textContent btn))
-              (.click ^ElementHandle btn)
-              (println "Clicked button.")
-              (catch Exception e
-                (println "Failed to click button:" (.getMessage e)))))
-        ]
-    ))
-
-
-;====================================
+;===========================================
 
 (defn extract-label-and-name [^Page page key]
   (let [
@@ -177,30 +147,6 @@
     ))
 ;====================================
 
-
-(defn make-extract-click-button
-  [key & {:keys [timeout-ms] :or {timeout-ms 5000}}]
-  (fn [{:keys [^Page page]}]
-    (try
-      ;; call your original function (side-effecting; prints & clicks)
-      (extract-label-and-name page key)
-      {:ok   true
-       :step "extract-label-and-name"
-       :key  key}
-      (catch Exception e
-        {:ok    false
-         :step  "extract-label-and-name"
-         :key   key
-         :error (.getMessage e)}))))
-
-
-
-(defn page-reloaded? [^Page page old-origin]
-  (let [new-origin (.evaluate page "performance.timeOrigin")]
-    (not= new-origin old-origin)))
-
-
-;;;;;========
 
 (defn toggle-jqx-dropdown-with-check
 
@@ -257,7 +203,69 @@
                              {:found true}
                              {:found false :reason "Content missing"})
                    :close close-res}}))))
-;;===============================================
+
+
+;===============  WORKING  download Test  ================
+
+(defn user-downloads-dir ^java.nio.file.Path []
+  (Paths/get (System/getProperty "user.home") (into-array String ["Downloads"])))
+
+(defn download-and-handle
+  [^Page page selector dest-path]
+
+  (println  "Is visible:: " selector  " = "  (.isVisible page selector) )
+
+  ;; 1. Kick off the download and wait for it to complete
+  (let [download
+        (.waitForDownload page
+                          (fn []
+                            (.click page selector)))
+
+        ;; 2. Get the temp path where Playwright saved it
+        temp-path (.path download)]
+    (println "Downloaded temp file at:" temp-path)
+
+    ;; 3a. Read it into memory
+    (let [contents (slurp (str temp-path))]
+      (println "First 200 chars of download:" (subs contents 0 (min 200 (count contents)))))
+
+    ;; 3b. Or move it to a permanent location
+    (io/copy (io/file (str temp-path))
+             (io/file dest-path))
+    (println "Saved download to:" dest-path)
+
+    ;; 4. Return the final path
+    dest-path))
+
+
+(defn downLoadWithTimestamp [state counter]
+  ;====  click download button  - visible ====
+
+  (let [tim (str (ht/now))
+        page (get @state "page")
+        downloadFileName (str counter "-" (str/replace (str "downloadFile-" tim ".txt") ":" "-"))
+        downloadPath (str (user-downloads-dir) File/separator downloadFileName)
+        - (println "downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
+        ]
+    (download-and-handle page "#download-button" downloadPath)
+    )
+)
+
+;================   download wrapper   =========================
+
+
+(defn download-test-step
+  "Harness step: performs the actual download via dl/downLoadWithTimestamp.
+   Receives {:keys [state page ...]} from the harness, must return a result map."
+  [{:keys [state]}]
+  ;; Maintain your own counter for downloads (per run)
+  (let [counter (get (swap! state update "download-ctr" (fnil inc 0)) "download-ctr")
+        dest    (dl/downLoadWithTimestamp state counter)
+        exists? (.exists (io/file dest))]
+    {:step          :download-test-step
+     :download-path dest
+     :ok            (boolean exists?)
+     :note          (when-not exists? "Downloaded file not found on disk after copy.")}))
 
 ;
 ;===========   Start of Test Suite   =============
@@ -272,25 +280,42 @@
     ;=============   setup   ================================
 
     (h/setup! mainState {:headless? false :browser :chromium})
-    (println)
-    (println "➡️  Navigating to:" (p "url"))
+    (println) (println "➡️  Navigating to:" (p "url"))
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)
 
    ;;--- needs mainState and change to take a title (title in params  dddd ?????
     (h/run-test! mainState "Title should be Owl Buddy" title-step)
+    (Thread/sleep 1000)
 
-    (doseq [ii [0 1 2 3]]
-      (println "doseq:: " ii )
-      (toggle-jqx-dropdown-with-check (get @mainState "page") "#jqxImageQuery" "#dropdownlistContentjqxImageQuery" ii)
-      (Thread/sleep 1000)
-      )                    ;;works (extract-label-and-name (get @mainState "page") "#blink-button")  ; "start flipbook"
+    (h/run-test! mainState "download-test-step" download-test-step)
+
+    ;(doseq [ii [0 1 2 3]] (println "doseq:: " ii )
+    ;  (toggle-jqx-dropdown-with-check (get @mainState "page") "#jqxImageQuery" "#dropdownlistContentjqxImageQuery" ii)
+    ; (Thread/sleep 1000))
+
+    (doseq [ii [0 1 2 3]] (println "Select image: " ii )
+      (let [open   "#jqxImageQuery"
+            panel  "#dropdownlistContentjqxImageQuery"
+            option (format "#listitem%dinnerListBoxjqxImageQuery" ii)]
+        (h/run-dropdown-select-handle! mainState "select image" open panel option))
+      (Thread/sleep 1000))
+
+
+    (doseq [ii [0 ]] (println "Select music: " ii )
+                        (let [open   "#jqxMusicQuery"
+                              panel  "#dropdownlistContentjqxMusicQuery"
+                              option (format "#listitem%dinnerListBoxjqxMusicQuery" ii)]
+                          (h/run-dropdown-select-handle! mainState "select music" open panel option))
+                        (Thread/sleep 4000))
 
     (h/run-test! mainState "Start flipbook" "#blink-button" extract-label-and-name)
     (Thread/sleep 3000)
 
     (h/run-test! mainState "Stop flipbook" "#blink-button" extract-label-and-name)
-    (Thread/sleep 2000)
+    (Thread/sleep 8000)
+
+    (h/run-test! mainState "download-test-step" download-test-step)
 
     (h/run-test! mainState "Show Info" "#info-button" extract-label-and-name)
     (Thread/sleep 4000)
@@ -300,19 +325,21 @@
 
 
     (h/run-click-handle!  mainState "Start flipbook"  "#blink-button")
+    (Thread/sleep 2000)
 
+    (doseq [ii [0 1 2 3]] (println "image doseq:: " ii )
+      (let [open   "#jqxImageQuery"
+          panel  "#dropdownlistContentjqxImageQuery"
+          option (format "#listitem%dinnerListBoxjqxImageQuery" ii)]
+      (h/run-dropdown-select-handle! mainState "select image" open panel option))
+      (Thread/sleep 1000))
 
-
-
-    ;;; not good ????
-    ;(h/run-test! mainState "Extract click info button" (make-extract-click-button "#info-button"))
-    ;(Thread/sleep 3000)
-    ;(h/run-test! mainState "Extract click info button" (make-extract-click-button "#info-button"))
-
-
-    ;(h/run-test! mainState (format "Pick item #%d" 1) (make-dropdown-test 1 :timeout-ms 8000))
-
-    ;; (h/run-test! state "Extract click button" (make-extract-click-button "#info-button"))
+    (doseq [ii [0 1 2]] (println "music doseq:: " ii )
+    (let [open   "#jqxMusicQuery"
+          panel  "#dropdownlistContentjqxMusicQuery"
+          option (format "#listitem%dinnerListBoxjqxMusicQuery" ii)]
+      (h/run-dropdown-select-handle! mainState "select music" open panel option))
+      (Thread/sleep 4000))
 
 
     ; (h/cleanup! state)
