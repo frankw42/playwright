@@ -31,6 +31,23 @@
      )
   )
 
+;==============   uplod   ==============================
+
+(defn upload-file
+  "Sets the given file path into the first <input type=\"file\"> on the page,
+   bypassing the OS picker."
+  [^Page page file-path-str]
+  (let [;; build a java.nio.file.Path
+        file-path (Paths/get file-path-str (into-array String []))
+        ;; locate your file-input; narrow selector as needed
+        file-input (.locator page "input[type=file]")]
+    ;; this call will fire the same events as a user selecting the file
+    (.setInputFiles file-input (into-array java.nio.file.Path [file-path]))
+    true))
+
+
+
+;========================================================
 
 (defn safe-text [^ElementHandle el]
   (try
@@ -287,6 +304,10 @@
    ;;--- needs mainState and change to take a title (title in params  dddd ?????
     (h/run-test! mainState "Title should be Owl Buddy" title-step)
     (Thread/sleep 1000)
+
+    (upload-file  (get @mainState "page") "resources/owlBuddycloudinary.json")
+    (Thread/sleep 1000)
+
 
     (h/run-test! mainState "download-test-step" download-test-step)
 
