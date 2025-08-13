@@ -329,22 +329,21 @@
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)
 
-    (h/run-test! mainState "Title should be Owl Buddy" title-step)
+    (h/run-test! mainState "Title should be: Owl Buddy" title-step)
     (Thread/sleep 1000)
 
-
     (let [res-path "resources/owlBuddycloudinary.json"]      ;; or an absolute path you built earlier
-      (h/run-test! mainState (str "upload:" res-path)
+      (h/run-test! mainState (str "Upload:" res-path)
                    (make-upload-step (get @mainState "page") res-path)))
     (Thread/sleep 1000)
 
-    (h/run-test! mainState "Start flipbook" "#blink-button" extract-label-and-name)
+    (h/run-test! mainState "Start flipbook animation" "#blink-button" extract-label-and-name)
     (Thread/sleep 3000)
 
-    (h/run-test! mainState "Stop flipbook" "#blink-button" extract-label-and-name)
+    (h/run-test! mainState "Stop flipbook animation" "#blink-button" extract-label-and-name)
     (Thread/sleep 8000)
 
-    (h/run-test! mainState "download-test-step" download-test-step)
+    (h/run-test! mainState "Download-test" download-test-step)
 
     ;(doseq [ii [0 1 2 3]] (println "doseq:: " ii )  ; OLD
     ;  (toggle-jqx-dropdown-with-check (get @mainState "page") "#jqxImageQuery" "#dropdownlistContentjqxImageQuery" ii)
@@ -354,7 +353,7 @@
       (let [open   "#jqxImageQuery"
             panel  "#dropdownlistContentjqxImageQuery"
             option (format "#listitem%dinnerListBoxjqxImageQuery" ii)]
-        (h/run-dropdown-select-handle! mainState "select image" open panel option))
+        (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
       (Thread/sleep 1000))
 
 
@@ -362,26 +361,29 @@
                         (let [open   "#jqxMusicQuery"
                               panel  "#dropdownlistContentjqxMusicQuery"
                               option (format "#listitem%dinnerListBoxjqxMusicQuery" ii)]
-                          (h/run-dropdown-select-handle! mainState "select music" open panel option))
+                          (h/run-dropdown-select-handle! mainState "Select music track by category" open panel option))
                         (Thread/sleep 4000))
 
-    (h/run-test! mainState "Start flipbook" "#blink-button" extract-label-and-name)
+    (h/run-test! mainState "Start flipbook animation" "#blink-button" extract-label-and-name)
     (Thread/sleep 3000)
 
-    (h/run-test! mainState "Stop flipbook" "#blink-button" extract-label-and-name)
+    (h/run-test! mainState "Stop flipbook animation" "#blink-button" extract-label-and-name)
     (Thread/sleep 8000)
 
-    (h/run-test! mainState "Show Info" "#info-button" extract-label-and-name)
+    (h/run-test! mainState "Show Info panel" "#info-button" extract-label-and-name)
     (Thread/sleep 4000)
 
-    (h/run-test! mainState "Hide Info" "#info-button" extract-label-and-name)
+    (h/run-test! mainState "Hide Info panel" "#info-button" extract-label-and-name)
     (Thread/sleep 2000)
 
     ;--- note  precondition: download button must be clickable - clickable
-    (h/run-test! mainState "download-test-step" download-test-step)
+    (h/run-test! mainState "Download-test" download-test-step)
     (Thread/sleep 2000)
 
-    (h/run-click-handle!  mainState "Start flipbook"  "#blink-button")
+    (h/run-click-handle!  mainState "Start flipbook animation"  "#blink-button")
+    (Thread/sleep 2000)
+
+    (h/run-click-handle!  mainState "Start tilt animation"  "#tilt-button")
     (Thread/sleep 2000)
 
 
@@ -389,14 +391,14 @@
       (let [open   "#jqxImageQuery"
           panel  "#dropdownlistContentjqxImageQuery"
           option (format "#listitem%dinnerListBoxjqxImageQuery" ii)]
-      (h/run-dropdown-select-handle! mainState "select image" open panel option))
+      (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
       (Thread/sleep 1000))
 
     (doseq [ii [0 1 2]] (println "music doseq:: " ii )
     (let [open   "#jqxMusicQuery"
           panel  "#dropdownlistContentjqxMusicQuery"
           option (format "#listitem%dinnerListBoxjqxMusicQuery" ii)]
-      (h/run-dropdown-select-handle! mainState "select music" open panel option))
+      (h/run-dropdown-select-handle! mainState "Select music by category" open panel option))
       (Thread/sleep 8000))
 
 
@@ -405,6 +407,18 @@
 )
 
 
+; start nrepl
+; Open your Clojure project in IntelliJ.
+; Go to Run → Edit Configurations….
+; Click the + icon and select Clojure REPL → Local.
+; Choose deps.edn (or Leiningen/Boot if that’s what your project uses).
+; Set the Project and Module to your project.
+; Apply and run the configuration
+
+;============   To Start  run   =============
+
+;  cd to playwright  dir
 ;clojure -M -m webtest.core owlUrl owl
+
 ; clojure -M -m webtest.core owlUrl functionTest
 
