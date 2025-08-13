@@ -312,6 +312,222 @@
      :ok            (boolean exists?)
      :note          (when-not exists? "Downloaded file not found on disk after copy.")}))
 
+
+
+;
+;========   Wrap tests for selection   ==========
+
+
+;; Each element is one test (fn of mainState)
+(def steps
+  [;; 1
+   (fn [mainState]
+
+     (h/run-test! mainState "Title should be: Owl Buddy" title-step)
+     (Thread/sleep 1000)
+     )
+   ;; 2
+   (fn [mainState]
+     (let [res-path "resources/owlBuddycloudinary.json"]      ;; or an absolute path you built earlier
+       (h/run-test! mainState (str "Upload:" res-path)
+                    (make-upload-step (get @mainState "page") res-path)))
+     (Thread/sleep 1000)
+     )
+   ;; 3
+   (fn [mainState]
+     (h/run-test! mainState "Start flipbook animation" "#blink-button" extract-label-and-name)
+     (Thread/sleep 5000)
+     )
+
+   ;; 4
+   (fn [mainState]
+     (h/run-test! mainState "Stop flipbook animation" "#blink-button" extract-label-and-name)
+     (Thread/sleep 8000)
+     )
+   ;; 5
+   (fn [mainState]
+     (h/run-test! mainState "Download-test" download-test-step)
+     )
+   ;; 6
+   (fn [mainState]
+     (let [open   "#jqxImageQuery"
+           panel  "#dropdownlistContentjqxImageQuery"
+           option (format "#listitem%dinnerListBoxjqxImageQuery" 0)]
+       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+     (Thread/sleep 1000)
+     )
+   ;; 7
+   (fn [mainState]
+     (let [open   "#jqxImageQuery"
+           panel  "#dropdownlistContentjqxImageQuery"
+           option (format "#listitem%dinnerListBoxjqxImageQuery" 1)]
+       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+     (Thread/sleep 1000)
+     )
+   ;; 8
+   (fn [mainState]
+     (let [open   "#jqxImageQuery"
+           panel  "#dropdownlistContentjqxImageQuery"
+           option (format "#listitem%dinnerListBoxjqxImageQuery" 2)]
+       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+     (Thread/sleep 1000)
+     )
+   ;; 9
+   (fn [mainState]
+     (let [open   "#jqxImageQuery"
+           panel  "#dropdownlistContentjqxImageQuery"
+           option (format "#listitem%dinnerListBoxjqxImageQuery" 3)]
+       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+     (Thread/sleep 1000)
+     )
+   ;; 10
+   (fn [mainState]
+     (let [open   "#jqxMusicQuery"
+           panel  "#dropdownlistContentjqxMusicQuery"
+           option (format "#listitem%dinnerListBoxjqxMusicQuery" 0)]
+       (h/run-dropdown-select-handle! mainState "Select music track by category" open panel option))
+     (Thread/sleep 4000)
+     )
+
+   ;; 11
+   (fn [mainState]
+     (h/run-test! mainState "Start flipbook animation" "#blink-button" extract-label-and-name)
+     (Thread/sleep 3000)
+     )
+
+   ;; 12
+   (fn [mainState]
+     (h/run-test! mainState "Stop flipbook animation" "#blink-button" extract-label-and-name)
+     (Thread/sleep 8000)
+     )
+   ;; 13
+   (fn [mainState]
+     (h/run-test! mainState "Show Info panel" "#info-button" extract-label-and-name)
+     (Thread/sleep 4000)
+     )
+   ;; 14
+   (fn [mainState]
+     (h/run-test! mainState "Hide Info panel" "#info-button" extract-label-and-name)
+     (Thread/sleep 2000)
+     )
+   ;; 15
+   (fn [mainState]
+     ;--- note  precondition: download button must be clickable - clickable
+     (h/run-test! mainState "Download-test" download-test-step)
+     (Thread/sleep 2000)
+     )
+   ;; 16
+   (fn [mainState]
+     (h/run-click-handle!  mainState "Start flipbook animation"  "#blink-button")
+     (Thread/sleep 2000)
+     )
+   ;; 17
+   (fn [mainState]
+     (h/run-click-handle!  mainState "Start tilt animation"  "#tilt-button")
+     (Thread/sleep 2000)
+     )
+   ;; 18
+   (fn [mainState]
+                           (let [open   "#jqxImageQuery"
+                                 panel  "#dropdownlistContentjqxImageQuery"
+                                 option (format "#listitem%dinnerListBoxjqxImageQuery" 0)]
+                             (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+                           (Thread/sleep 1000)
+     )
+   ;; 19
+     (fn [mainState]
+       (let [open   "#jqxImageQuery"
+             panel  "#dropdownlistContentjqxImageQuery"
+             option (format "#listitem%dinnerListBoxjqxImageQuery" 1)]
+         (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+       (Thread/sleep 1000)
+     )
+   ;; 20
+     (fn [mainState]
+       (let [open   "#jqxImageQuery"
+             panel  "#dropdownlistContentjqxImageQuery"
+             option (format "#listitem%dinnerListBoxjqxImageQuery" 2)]
+         (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+       (Thread/sleep 1000)
+     )
+   ;; 21
+     (fn [mainState]
+       (let [open   "#jqxImageQuery"
+             panel  "#dropdownlistContentjqxImageQuery"
+             option (format "#listitem%dinnerListBoxjqxImageQuery" 3)]
+         (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+       (Thread/sleep 1000)
+     )
+   ;; 22
+   (fn [mainState]
+     (let [open   "#jqxMusicQuery"
+           panel  "#dropdownlistContentjqxMusicQuery"
+           option (format "#listitem%dinnerListBoxjqxMusicQuery" 0)]
+       (h/run-dropdown-select-handle! mainState "Select music by category" open panel option))
+     (Thread/sleep 8000)
+     )
+
+   ;; 23
+   (fn [mainState]
+     (let [open   "#jqxMusicQuery"
+           panel  "#dropdownlistContentjqxMusicQuery"
+           option (format "#listitem%dinnerListBoxjqxMusicQuery" 1)]
+       (h/run-dropdown-select-handle! mainState "Select music by category" open panel option))
+     (Thread/sleep 8000)
+     )
+   ;; 24
+   (fn [mainState]
+     (let [open   "#jqxMusicQuery"
+           panel  "#dropdownlistContentjqxMusicQuery"
+           option (format "#listitem%dinnerListBoxjqxMusicQuery" 2)]
+       (h/run-dropdown-select-handle! mainState "Select music by category" open panel option))
+     (Thread/sleep 8000)
+     )
+
+   ])
+
+
+;;; (functionTestSelection [3])
+
+(defn functionTestSelection
+  "Arity-1: run ALL tests once in order.
+   Arity-2: run the given 1-based positions in the SAME order (duplicates allowed)."
+  ([mainState]
+
+   (let [p (:params @mainState)]
+     (println "\n*** Suite Name:: " (p "suiteName"))
+
+     (h/setup! mainState {:headless? false :browser :chromium})
+     (println) (println "➡️  Navigating to:" (p "url"))
+     (.navigate (get @mainState "page") (p "url"))
+     (Thread/sleep 3000)
+
+     (mapv #(% mainState) steps))
+
+   (h/cleanup! mainState)
+   )
+
+   ([mainState positions]
+
+    (let [p (:params @mainState)]
+      (println "\n*** Suite Name:: " (p "suiteName"))
+
+    (h/setup! mainState {:headless? false :browser :chromium})
+    (println) (println "➡️  Navigating to:" (p "url"))
+    (.navigate (get @mainState "page") (p "url"))
+    (Thread/sleep 3000)
+
+    (mapv (fn [pos]
+            (if-let [step (nth steps (dec pos) nil)]
+              (step mainState)
+              {:position pos :ok false :error :no-such-test}))
+          positions))
+
+    (h/cleanup! mainState)
+    )
+  )
+
+
 ;
 ;===========   Start of Test Suite   =============
 ;

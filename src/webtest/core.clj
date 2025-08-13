@@ -399,7 +399,8 @@
 
     (when (= param-2 "functionTest")
       (swap! state assoc :owlTest true)
-      (functionTest/functionTest state)
+       ;;  (functionTest/functionTest state)
+      (functionTest/functionTestSelection state) ; select tests from suite test list
       )
 
     ) ; let
