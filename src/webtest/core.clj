@@ -488,3 +488,5 @@
  ;  clojure -M -m webtest.core   http://localhost:8080/examples/sample.html
 ;;   clojure -M -m webtest.core owlUrl
 ;;   clojure -M -m webtest.core owlUrl owl
+
+; clojure -M -m webtest.core owlUrl functionTest
