@@ -1,0 +1,68 @@
+
+Note: script saved into humble dir.
+
+Copy/past run script below into terminal:
+Script waits for Owl Buddy window to open.
+On Window close will stop recording.
+File:  Frankw/Videos
+
+;--------------   new run with Sterio Mix device  input  --------------
+
+.\record-window.ps1 -Title "Owl Buddy" -AudioName "Stereo Mix (2- Realtek(R) Audio)"
+
+;--------------   new run   --------------
+
+.\record-window.ps1 -Title "Owl Buddy" -AudioName "Microphone (2.0 Camera)"
+
+
+;-------------   run   --------------------------------------
+
+powershell -ExecutionPolicy Bypass -File .\record-window.ps1 `
+  -Title "Owl Buddy" `
+  -AudioName "Microphone (2.0 Camera)"
+
+;---------   loction of output video   -----------------------
+
+.\videos\owl_buddy_YYYYMMDD_HHMMSS.mp4
+(Open it with: explorer .\videos.)
+
+
+;========= below is ffmpeg download an install  =======
+
+
+1) Find your audio device name (one-time)
+
+ffmpeg -list_devices true -f dshow -i dummy
+
+
+winget install --id Gyan.FFmpeg.Essentials -e
+ffmpeg -version
+
+- output:
+Command line alias added: "ffmpeg"
+Command line alias added: "ffplay"
+Command line alias added: "ffprobe"
+
+
+ffmpeg version 7.1.1-essentials_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers
+built with gcc 14.2.0 (Rev1, Built by MSYS2 project)
+
+
+
+- record whole pc screen:
+ffmpeg ^
+  -f gdigrab -framerate 30 -draw_mouse 1 -i desktop ^
+  -f dshow -i audio="Stereo Mix (Realtek(R) Audio)" ^
+  -c:v libx264 -preset veryfast -crf 23 -r 30 ^
+  -c:a aac -b:a 160k -pix_fmt yuv420p -movflags +faststart ^
+  "videos\playwright_%DATE:~-4%%DATE:~4,2%%DATE:~7,2%_%TIME:~0,2%%TIME:~3,2%%TIME:~6,2%.mp4"
+  
+  
+- record playwright window by title:
+  ffmpeg ^
+  -f gdigrab -framerate 30 -draw_mouse 1 -i title="Owl Buddy" ^
+  -f dshow -i audio="Stereo Mix (Realtek(R) Audio)" ^
+  -c:v libx264 -preset veryfast -crf 23 -r 30 ^
+  -c:a aac -b:a 160k -pix_fmt yuv420p -movflags +faststart ^
+  "videos\playwright_window.mp4"
+  
