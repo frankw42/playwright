@@ -1,0 +1,30 @@
+
+;; Ordered map so default run preserves insertion order
+(def ^:private test-catalog
+  (array-map
+    1 (fn []
+        (run-test! "Test 1: Open Home Page"
+          (fn [] (println "Opening home page"))))
+
+    2 (fn []
+        (run-test! "Test 2: Fill Login Form"
+          (fn [] (println "Filling username and password"))))
+
+    3 (fn []
+        (run-test! "Test 3: Open Settings"
+          (fn [] (println "Opening settings panel"))))))
+
+(defn functionTest
+  "Run selected tests by their numbers, in the exact order provided.
+   - No args: runs all tests in catalog order (insertion order).
+   - One arg: vector/list of test numbers to run, in the order given."
+  ([] ;; no args → run all in insertion order
+   (functionTest (keys test-catalog)))
+  ([test-nums]
+   (doseq [n test-nums]
+     (if-let [runner (get test-catalog n)]
+       (do
+         (println "Starting Test" n)
+         (runner)
+         (println "Completed Test" n))
+       (println "Skipping: unknown test number" n)))))

@@ -1,0 +1,16 @@
+  {
+  "title" "Owl Buddy"
+  "username" "Stella"
+   "suiteName"  "Function Test"
+   "url"      "https://frankw42.github.io/public/index.html"
+   "owlUrl"   "https://frankw42.github.io/public/index.html"
+   "localUrl" "http://localhost:8080/examples/sample.html"
+   "password" "abc"
+   "formal question" "Show formal question with space"
+   "formal-question" "internal name: formal-question"
+   "textarea" "Hello from Playwright"
+   "remarks" "names of input not standard??"
+   :name "Stella"
+   :email "frankw45@gmail.com"
+   :password "ABC123"
+   :roles ["admin" "user"]}
