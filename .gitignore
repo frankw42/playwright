@@ -19,5 +19,8 @@ Thumbs.db
 # Logs / local state
 *.log
 
+.nrepl-port
+
+
 # Clojure CLI local deps cache (optional)
 /deps.edn.lock
