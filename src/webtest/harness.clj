@@ -7,6 +7,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [webtest.download :as dl]
+            [webtest.email :as email]
             )
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page$ScreenshotOptions)
@@ -284,13 +285,45 @@
                 :open open-sel :panel panel-sel :option option-sel})))
 
 
+
+
+;;-----------   emaio   ----------------
+;;;===============================
+
+(defn mail
+  "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
+  [subject body-text attachment-path]
+  (let [smtp-opts {:host "smtp.gmail.com"
+                   :port 587
+                   :user "frankw45@gmail.com"
+                   :pass "gnav nzzw uycs ktbf"    ;;; old:  "gzbd ljcs onez fouu"        new:  "gnav nzzw uycs ktbf"
+                   :tls  true}
+        report-file (io/file attachment-path)
+        msg {:from    "frankw45@gmail.com"
+             :to      ["frankw45@gmail.com"]
+             :subject subject
+             :body    [ ;; plain-text part
+                       {:type    "text/plain"
+                        :content body-text}
+                       ;; attachment part
+                       {:type      :attachment
+                        :content   report-file
+                        :file-name (.getName report-file)}]}]
+    (email/send-test-report-email smtp-opts msg)
+    (println "Email sent with attachment:" (.getName report-file))))
+
+;;====================================
 ;; ---------- Part 3: cleanup ----------
 
 (defn cleanup!
   "Close page/context/browser/pw found in `state` and remove them from state.
    Returns the updated state map."
   [state]
-    ;(println "state:::  " state)
+
+  (mail "Owl test"  "place holder" (get @state "log-file" ))
+
+
+               ;(println "state:::  " state)
   (let [{:strs [page context browser pw]} @state]
     (try (when page (.close page)) (catch Throwable _))
     (try (when context (.close context)) (catch Throwable _))
