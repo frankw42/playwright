@@ -373,7 +373,7 @@
                    :close close-res}}))))
 
 (defn -main [& args]
-      (print "\nStarting Playwright-based test...  ")
+      (print "\nStarting Playwright-based test...   version: 1.0.1 ")
       (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
       (println "\nTime:  " (ht/time-str (ht/now)) "\n")
 
