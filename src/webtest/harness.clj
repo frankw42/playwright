@@ -320,10 +320,10 @@
    Returns the updated state map."
   [state]
 
-  (mail "Owl test"  "place holder" (get @state "log-file" ))
+   (mail "Owl test"  "place holder" (get @state "log-file" ))
 
 
-               ;(println "state:::  " state)
+               (println "Before cleanup:: state:  " state)
   (let [{:strs [page context browser pw]} @state]
     (try (when page (.close page)) (catch Throwable _))
     (try (when context (.close context)) (catch Throwable _))
