@@ -10,8 +10,6 @@
   (catch Exception e
     (println "Failed to send email:" (.getMessage e)))))
 
-(println "After send email.
-")
 ;;=====  location to create app passwords   =====
 ;; https://myaccount.google.com/apppasswords
 
