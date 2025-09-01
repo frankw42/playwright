@@ -8,6 +8,7 @@
             [clojure.string :as str]
             [webtest.download :as dl]
             [webtest.email :as email]
+            [clojure.pprint :as pprint]
             )
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page$ScreenshotOptions)
@@ -98,46 +99,135 @@
 
 ;;====
 
+;======================================================================
+
+(defn- unescape-nls [x]
+  (cond
+    (string? x) (-> x
+                    (str/replace "\\r\\n" "\n")
+                    (str/replace "\\n" "\n"))
+    (map? x)    (into (empty x) (map (fn [[k v]] [k (unescape-nls v)]) x))
+    (sequential? x) (mapv unescape-nls x)
+    :else x))
+
+
+    ;==================================================================
+
+
+;; ---------- helpers ----------
+
+(defn- order-keys ^java.util.LinkedHashMap [m]
+  (let [key-order [:id :name :ok]
+        preferred (filter #(contains? m %) key-order)
+        rest-ks   (->> (keys m)
+                       (remove (set preferred))
+                       (sort-by (fn [k]
+                                  (cond
+                                    (keyword? k) (name k)
+                                    (string?  k) k
+                                    :else        (str k)))))
+        lhm (java.util.LinkedHashMap.)]
+    (doseq [k (concat preferred rest-ks)]
+      (.put lhm k (get m k)))
+    lhm))
+
+(defn- human-path [edn-path]
+  (if (.endsWith edn-path ".edn")
+    (str (subs edn-path 0 (- (count edn-path) 4)) ".human.txt")
+    (str edn-path ".human.txt")))
+
+(defn- write-split-string!
+  "Write s to w, inserting real newlines where the *content* has:
+   - actual CR/LF
+   - escaped sequences \\n or \\r\\n
+   Indents continuation lines with `indent`."
+  [^java.io.Writer w ^String s ^String indent]
+  (let [nl (System/lineSeparator)]
+    (loop [i 0, n (.length s)]
+      (when (< i n)
+        (let [c (.charAt s i)
+              nextc (fn [j] (when (< j n) (.charAt s j)))]
+          (cond
+            ;; actual CRLF
+            (and (= c \return) (= (nextc (inc i)) \newline))
+            (do (.write w nl)
+                (when (< (+ i 2) n) (.write w indent))
+                (recur (+ i 2) n))
+
+            ;; actual LF
+            (= c \newline)
+            (do (.write w nl)
+                (when (< (inc i) n) (.write w indent))
+                (recur (inc i) n))
+
+            ;; escaped \r\n  (chars: \ r \ n)
+            (and (= c \\) (= (nextc (inc i)) \r)
+                 (= (nextc (+ i 2)) \\) (= (nextc (+ i 3)) \n))
+            (do (.write w nl)
+                (when (< (+ i 4) n) (.write w indent))
+                (recur (+ i 4) n))
+
+            ;; escaped \n
+            (and (= c \\) (= (nextc (inc i)) \n))
+            (do (.write w nl)
+                (when (< (+ i 2) n) (.write w indent))
+                (recur (+ i 2) n))
+
+            :else
+            (do (.write w (int c))
+                (recur (inc i) n))))))))
+
+(defn- write-human!
+  "Pretty human log for one entry. Splits strings on newline markers."
+  [^java.io.Writer w ^java.util.LinkedHashMap m]
+  (let [nl (System/lineSeparator)
+        pairs (seq m)
+        lasti (dec (count pairs))]
+    (.write w "{") (.write w nl)
+    (doseq [[i [k v]] (map-indexed vector pairs)]
+      (let [kstr   (pr-str k)
+            indent (apply str (repeat (+ 2 (count kstr) 2) \space))] ; '  :key  '
+        (.write w "  ") (.write w kstr) (.write w "  ")
+        (if (string? v)
+          (write-split-string! w v indent)
+          (pprint/write v :stream w :pretty true :readably true))
+        (when (< i lasti) (.write w ","))
+        (.write w nl)))
+    (.write w "}") (.write w nl) (.write w nl)))
+
+;; ---------- main API ----------
+
 (defn append-log!
-"Append one EDN map per line to a single log file per run.
- Lazily picks a log path on first use, caches it in state (\"log-file\")
- and *run-log-file*. Orders keys before writing."
-([m] (append-log! nil m))
-([state m]
- (let [;; choose (or create) the run's single log file
-       log-path
-       (or (some-> state deref (get "log-file"))
-           (some-> *run-log-file* .getAbsolutePath)
-           (let [f (dl/timestamped-path "test-log.edn")]
-             (io/make-parents f)
-             (when state (swap! state assoc "log-file" (.getAbsolutePath f)))
-             (alter-var-root #'*run-log-file* (constantly f))
-             (.getAbsolutePath f)))
-       f (io/file log-path)
+  "Appends two outputs per entry:
+   1) <run>.edn        — one EDN map per line (machine-readable, escaped \\n).
+   2) <run>.human.txt  — pretty, with real line breaks inside string values."
+  ([m] (append-log! nil m))
+  ([state m]
+   (let [log-path
+         (or (some-> state deref (get "log-file"))
+             (some-> *run-log-file* .getAbsolutePath)
+             (let [f (dl/timestamped-path "test-log.edn")]
+               (io/make-parents f)
+               (when state (swap! state assoc "log-file" (.getAbsolutePath f)))
+               (alter-var-root #'*run-log-file* (constantly f))
+               (.getAbsolutePath f)))
+         f-edn   (io/file log-path)
+         f-human (io/file (human-path log-path))
 
-       ;; ensure :id exists for this line
-       n      (next-num!)
-       to-log (assoc m :id n)
+         n    (next-num!)
+         m'   (assoc m :id n)
+         lhm  (order-keys m')]
 
-       ;; ORDERING: put these first (in this order), then any remaining keys alphabetically
-       key-order [:id :name :ok]   ;; <-- edit this vector if you want a different fixed order
-       preferred (filter #(contains? to-log %) key-order)
-       rest-ks   (->> (keys to-log)
-                      (remove (set preferred))
-                      (sort-by (fn [k]
-                                 (cond
-                                   (keyword? k) (name k)
-                                   (string? k)  k
-                                   :else        (str k)))))
+     ;; 1) Machine EDN: one line per entry
+     (spit f-edn (str (pr-str lhm) "\n") :append true)
 
-       ;; build an insertion-ordered map for stable printing
-       lhm (java.util.LinkedHashMap.)]
-   (doseq [k (concat preferred rest-ks)]
-     (.put lhm k (get to-log k)))
-   (spit f (str (pr-str lhm) "\n") :append true)
-   log-path)))
+     ;; 2) Human-readable with real newlines in strings
+     (with-open [w (io/writer f-human :append true)]
+       (write-human! w lhm))
 
-;;=====
+     log-path)))
+
+;======================================================================
 
 
 ;; ---------- failure screenshot ----------
@@ -148,6 +238,14 @@
 (defn- mk-test-id [n test-name]
   (format "%03d-%s" (long n)
           (-> (or test-name "unnamed") str/trim (str/replace #"\s+" "-"))))
+
+;===============================================================
+
+(defn ^:private normalize-payload [p]
+  (when (map? p)
+    (-> p
+        (cond-> (contains? p :ok?) (assoc :ok (:ok? p)))
+        (dissoc :ok?))))
 
 (defn run-test!
   "Arity 3: (run-test! state test-name f) ; f gets {:state :pw :browser :context :page}
@@ -160,16 +258,24 @@
          start-ns (System/nanoTime)
          started  (Instant/now)]
      (try
-       (let [payload (f {:state state :pw pw :browser browser :context context :page page})
+       (let [payload (normalize-payload (f {:state state :pw pw :browser browser :context context :page page}))
              ended   (Instant/now)
              dur-ms  (long (/ (- (System/nanoTime) start-ns) 1e6))
-             res     (merge {:test-id test-id :name test-name :ok true
-                             :url (.url page) :started (str started)
-                             :ended (str ended) :duration-ms dur-ms}
-                            (when (map? payload) payload))]
+             ok      (if (and (map? payload) (contains? payload :ok)) (boolean (:ok payload)) true)
+             base    {:test-id test-id :name test-name :ok ok
+                      :url (.url page) :started (str started)
+                      :ended (str ended) :duration-ms dur-ms}
+             res0    (if (map? payload) (merge base payload) base)
+             ;; add screenshot iff failure and caller didn't supply one
+             res     (if ok
+                       res0
+                       (update res0 :screenshot #(or % (save-failure-screenshot! page {:prefix test-id}))))]
+
          (append-log! state res)
-         (println "[OK  ]" test-id "-" test-name)
+         (println (if ok "[OK  ]" "[FAIL]") test-id "-" test-name
+                  (when-not ok (str "\n" (or (:error res) ""))))
          res)
+
        (catch AssertionError e
          (let [shot (save-failure-screenshot! page {:prefix test-id})
                ended (Instant/now)
@@ -181,6 +287,7 @@
            (append-log! state res)
            (println "[FAIL]" test-id "-" test-name "\n" (.getMessage e))
            res))
+
        (catch Throwable e
          (let [shot (save-failure-screenshot! page {:prefix test-id})
                ended (Instant/now)
@@ -196,7 +303,12 @@
   ;; Arity 4
   ([state test-name selector action-fn]
    (run-test! state test-name
-              (fn [{:keys [page]}] (action-fn page selector)))))
+              (fn [{:keys [page]}]
+                (action-fn page selector)))))
+
+
+;===========================================================
+
 
 (defn run-click-handle! [state test-name selector]
   (run-test! state test-name selector
@@ -212,24 +324,6 @@
 
 
 ;;======================================================
-
-
-;;-----------   helper   --------------------
-
-(defn run-click-handle!OLD
-  [state test-name selector]
-  (run-test! state test-name selector
-             (fn [page sel]
-               (let [h (.waitForSelector page sel)]     ;; ElementHandle or nil
-                 (when (nil? h)
-                   (throw (ex-info "Selector not found" {:selector sel})))
-                 (try
-                   (.scrollIntoViewIfNeeded h)
-                   (.click h)
-                   {:action "click-handle" :selector sel}
-                   (finally
-                     (when h
-                       (.dispose h))))))))
 
 
   ;;---------- END  Part 2 run one test  ------
@@ -308,9 +402,10 @@
                        ;; attachment part
                        {:type      :attachment
                         :content   report-file
-                        :file-name (.getName report-file)}]}]
+                        :file-name (.getName report-file)
+                        }]}]
     (email/send-test-report-email smtp-opts msg)
-    (println "Email sent with attachment:" (.getName report-file))))
+    (println "Email sent with attachment:" (human-path(.getName report-file)))))
 
 ;;====================================
 ;; ---------- Part 3: cleanup ----------
@@ -320,7 +415,7 @@
    Returns the updated state map."
   [state]
 
-   (mail "Owl test"  "place holder" (get @state "log-file" ))
+   (mail "Owl test"  "place holder" (human-path (get @state "log-file" )))
 
 
                (println "Before cleanup:: state:  " state)

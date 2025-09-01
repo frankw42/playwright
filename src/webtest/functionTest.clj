@@ -59,22 +59,6 @@
        :ok (and ok? (boolean dom-name))})))
 
 
-;=========================================================================
-
-(defn upload-fileOld
-  "Sets the given file path into the first <input type=\"file\"> on the page,
-   bypassing the OS picker."
-  [^Page page file-path-str]
-  (let [;; build a java.nio.file.Path
-        file-path (Paths/get file-path-str (into-array String []))
-        ;; locate your file-input; narrow selector as needed
-        file-input (.locator page "input[type=file]")]
-    ;; this call will fire the same events as a user selecting the file
-    (.setInputFiles file-input (into-array java.nio.file.Path [file-path]))
-    true))
-
-
-
 ;========================================================
 
 (defn safe-text [^ElementHandle el]
@@ -175,22 +159,34 @@
 
 (defn anyOne [txt] (contains? #{"Blink" "- Tilt -"  ""} txt))
 
-;===========================================
 
-(defn extract-label-and-name [^Page page key]
-  (let [
-        button-loc (.locator page key )
-        button-handles (try (seq (.elementHandles button-loc)) (catch Exception _ nil))
-        btn (first button-handles)
-          -  (try
-              (println "try:: Click Button:: === " (.textContent btn))
-              (.click ^ElementHandle btn)
-              (println "Clicked button.")
-              (catch Exception e
-                (println "Failed to click button:" (.getMessage e))))
-        ]
-    ))
-;====================================
+;==========================================
+
+
+(defn extract-label-and-name
+  ^clojure.lang.IPersistentMap
+  [^Page page key]
+  (let [loc (.locator page key)
+        handles (try (.elementHandles loc) (catch Exception _ nil))
+        btn (some-> handles seq first)]
+    (cond
+      (nil? btn)
+      {:ok? false :action :click :key key :error "No element found for selector"}
+
+      :else
+      (try
+        (let [label (try (.textContent ^ElementHandle btn) (catch Exception _ nil))]
+          (.click ^ElementHandle btn)
+          {:ok? true :action :click :key key :label label})
+        (catch Exception e
+          {:ok? false
+           :action :click
+           :key key
+           :label (try (.textContent ^ElementHandle btn) (catch Exception _ nil))
+           :error (.getMessage e)})))))  ;; <- returns a map on all paths
+
+
+;===========================================
 
 
 (defn toggle-jqx-dropdown-with-check
@@ -562,9 +558,6 @@
 
     (h/run-test! mainState "Download-test" download-test-step)
 
-    ;(doseq [ii [0 1 2 3]] (println "doseq:: " ii )  ; OLD
-    ;  (toggle-jqx-dropdown-with-check (get @mainState "page") "#jqxImageQuery" "#dropdownlistContentjqxImageQuery" ii)
-    ; (Thread/sleep 1000))
 
     (doseq [ii [0 1 2 3]] (println "Select image: " ii )
       (let [open   "#jqxImageQuery"
