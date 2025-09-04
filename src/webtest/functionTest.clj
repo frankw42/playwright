@@ -48,9 +48,8 @@
    res-path is a fully-resolved path string (or however you resolve it upstream)."
   [page res-path]
   (fn [par]  ;  [{:keys [state]}]
-    (println "fn: path: "  res-path)
+     ; (println "       Upload file: "  res-path)
     (let [ok? (upload-file page res-path)
-          - (println "ok? " ok?)
           input (.locator page "input[type=file]")
           dom-name (.evaluate input "(el)=> el && el.files && el.files[0] ? el.files[0].name : null")]
       {:step :upload-test-step
@@ -72,9 +71,9 @@
 
 
 (defn title-step [{:keys [state page]}]
-  (println "params: " (get @state :params))
-  (println "title: " (get (:params @state) "title"))
-  (println "page: " page)
+   ;(println "       params: " (get @state :params))
+   ;(println "title: " (get (:params @state) "title"))
+  ;(println "page: " page)
 
   (let [expected (or (get @state "title") "Owl Buddy")]
     (-> (com.microsoft.playwright.assertions.PlaywrightAssertions/assertThat page)
@@ -190,7 +189,7 @@
   [^Page page dropdownSelector  idAfterOpen ii & {:keys [timeout-ms] :or {timeout-ms 5000}}]
   (let [widget-sel dropdownSelector
        ; - (println "page: " page)
-        - (println "widget-sel: " widget-sel)
+        - (println "        widget-sel: " widget-sel)
         ;; attempt to get the widget, but catch any timeout or other errors
         widget
         (try
@@ -249,8 +248,7 @@
 
 (defn download-and-handle
   [^Page page selector dest-path]
-
-  (println  "Is visible:: " selector  " = "  (.isVisible page selector) )
+  (println  "        Is visible:: " selector  " = "  (.isVisible page selector) )
 
   ;; 1. Kick off the download and wait for it to complete
   (let [download
@@ -260,16 +258,17 @@
 
         ;; 2. Get the temp path where Playwright saved it
         temp-path (.path download)]
-    (println "Downloaded temp file at:" temp-path)
+        ; (println "        Downloaded temp file at:" temp-path)
 
     ;; 3a. Read it into memory
-    (let [contents (slurp (str temp-path))]
-      (println "First 200 chars of download:" (subs contents 0 (min 200 (count contents)))))
+     ;(let [contents (slurp (str temp-path))]
+     ; (println "        First 200 chars of download:" (subs contents 0 (min 200 (count contents))))
+     ;  )
 
     ;; 3b. Or move it to a permanent location
     (io/copy (io/file (str temp-path))
              (io/file dest-path))
-    (println "Saved download to:" dest-path)
+    (println "            Saved download to:" dest-path)
 
     ;; 4. Return the final path
     dest-path))
@@ -282,7 +281,7 @@
         page (get @state "page")
         downloadFileName (str counter "-" (str/replace (str "downloadFile-" tim ".txt") ":" "-"))
         downloadPath (str (user-downloads-dir) File/separator downloadFileName)
-        - (println "downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
+        - (println "        downloadFileName:: " downloadFileName " downloadPath: " downloadPath)
         ]
     (download-and-handle page "#download-button" downloadPath)
     )
@@ -487,12 +486,10 @@
   ([mainState]
 
    (let [p (:params @mainState)]
-     (println "\n*** Suite Name:: " (p "suiteName"))
-
-     (println "mainState:: :headless: " (:headless @mainState))
+     (println "\n**** Suite Name:: " (p "suiteName"))
 
      (h/setup! mainState {:headless? (:headless @mainState) :browser :chromium})
-     (println) (println "➡️  Navigating to:" (p "url"))
+     (println "        Navigating to:" (p "url") "\n")
      (.navigate (get @mainState "page") (p "url"))
      (Thread/sleep 3000)
 
@@ -507,7 +504,7 @@
       (println "\n*** Suite Name:: " (p "suiteName"))
 
     (h/setup! mainState {:headless? false :browser :chromium})
-    (println) (println "➡️  Navigating to:" (p "url"))
+    (println "        Navigating to:" (p "url"))
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)
 
@@ -536,7 +533,7 @@
     ;=============   setup   ================================
 
     (h/setup! mainState {:headless? false :browser :chromium})
-    (println) (println "➡️  Navigating to:" (p "url"))
+    (println) (println "        Navigating to:" (p "url"))
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)
 
@@ -557,7 +554,7 @@
     (h/run-test! mainState "Download-test" download-test-step)
 
 
-    (doseq [ii [0 1 2 3]] (println "Select image: " ii )
+    (doseq [ii [0 1 2 3]] (println "        Select image: " ii )
       (let [open   "#jqxImageQuery"
             panel  "#dropdownlistContentjqxImageQuery"
             option (format "#listitem%dinnerListBoxjqxImageQuery" ii)]
@@ -565,7 +562,7 @@
       (Thread/sleep 1000))
 
 
-    (doseq [ii [0 ]] (println "Select music: " ii )
+    (doseq [ii [0 ]] (println "        Select music: " ii )
                         (let [open   "#jqxMusicQuery"
                               panel  "#dropdownlistContentjqxMusicQuery"
                               option (format "#listitem%dinnerListBoxjqxMusicQuery" ii)]

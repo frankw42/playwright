@@ -51,8 +51,8 @@
 
 (defn download-and-handle
   [^Page page selector dest-path]
-  (println "download-and-handle:: page: " page)
-    (println  "Is visible:: " selector  " = "  (.isVisible page selector) )
+     ; (println "download-and-handle:: page: " page)
+     ; (println  "Is visible:: " selector  " = "  (.isVisible page selector) )
 
   ;(let [btn (.locator page selector)]
   ;  (.isVisible (PlaywrightAssertions/assertThat btn)) ; waits under the hood
@@ -66,16 +66,16 @@
 
         ;; 2. Get the temp path where Playwright saved it
         temp-path (.path download)]
-    (println "Downloaded temp file at:" temp-path)
+        ; (println "Downloaded temp file at:" temp-path)
 
     ;; 3a. Read it into memory
-    (let [contents (slurp (str temp-path))]
-      (println "First 200 chars of download:" (subs contents 0 (min 200 (count contents)))))
+    ;(let [contents (slurp (str temp-path))]
+     ; (println "        First 200 chars of download:" (subs contents 0 (min 200 (count contents)))))
 
     ;; 3b. Or move it to a permanent location
     (io/copy (io/file (str temp-path))
              (io/file dest-path))
-    (println "Saved download to:" dest-path)
+    (println "       Saved download to:" dest-path)
 
     ;; 4. Return the final path
     dest-path))
@@ -99,5 +99,5 @@
         fname  (str counter "-" prefix "-" ts ext)
         ;; build the destination using java.nio Paths (no manual separators)
         dest   (-> (user-downloads-dir) (.resolve fname) str)]
-    (println "downLoadWithTimestamp →" dest)
+      ; (println "downLoadWithTimestamp →" dest)
     (download-and-handle page selector dest)))

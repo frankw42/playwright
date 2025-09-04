@@ -383,14 +383,14 @@
     (println "Command line param-1:" param-1 "param-2:" param-2 "others:" rest "\n")
     (if param-1
       (let [firstSavedUrl (get-in @state [:params (str param-1)])]
-        (println "firstSavedUrl: " firstSavedUrl)
+          ;(println "        firstSavedUrl: " firstSavedUrl)
         (if firstSavedUrl
           (swap! state assoc "url" firstSavedUrl)
           (swap! state assoc "url" (str param-1)))
           ) ; if
       ) ; if
 
-    (println "**** url: " (get @state "url"))
+      ; (println "**** Will use URL: " (get @state "url"))
 
     (when (= param-2 "owl")
       (swap! state assoc :owlTest true)

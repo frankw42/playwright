@@ -100,8 +100,8 @@
     (println "Downloaded temp file at:" temp-path)
 
     ;; 3a. Read it into memory
-    (let [contents (slurp (str temp-path))]
-      (println "First 200 chars of download:" (subs contents 0 (min 200 (count contents)))))
+    ;(let [contents (slurp (str temp-path))]
+     ; (println "First 200 chars of download:" (subs contents 0 (min 200 (count contents)))))
 
     ;; 3b. Or move it to a permanent location
     (io/copy (io/file (str temp-path))

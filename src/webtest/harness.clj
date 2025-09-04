@@ -393,18 +393,18 @@
 (defn mail
   "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
   [subject body-text attachment-path]
-
   (let [userID (env "MAIL_ID") userKEY (env "MAIL_KEY")]
+    (println "       userID: " userID " userKEY: " userKEY)
     (if (and userID userKEY)
       (do
         (let [smtp-opts {:host "smtp.gmail.com"
                          :port 587
-                         :user userID
-                         :pass userKEY
+                         :user (env "MAIL_ID")
+                         :pass  (env "MAIL_KEY")
                          :tls  true}
               report-file (io/file attachment-path)
-              msg {:from   userID
-                   :to      [userKEY]
+              msg {:from   (env "MAIL_ID")  ; "frankw45@gmail.com"
+                   :to     (env "MAIL_ID")  ; ["frankw45@gmail.com"]
                    :subject subject
                    :body    [;; plain-text part
                              {:type    "text/plain"
@@ -415,9 +415,9 @@
                               :file-name (.getName report-file)
                               }]}]
           (email/send-test-report-email smtp-opts msg)
-          (println "Email sent with attachment:" (human-path (.getName report-file))))
+          (println "       Attempted:: email sent with attachment:"  (.getName report-file)))
           ) ;do
-      (println "Email not sent. Need to supply: MAIL_ID AND MAIL_KEY")
+      (println "To send email with log report configure: MAIL_ID AND MAIL_KEY environment vars")
    )  ;if
   ))
 
@@ -431,9 +431,7 @@
   [state]
 
    (mail "Owl Test"  "Owl functional test.  Log file attached." (human-path (get @state "log-file" )))
-
-
-               (println "Before cleanup:: state:  " state)
+          ;;     (println "Before cleanup:: state:  " state)
   (let [{:strs [page context browser pw]} @state]
     (try (when page (.close page)) (catch Throwable _))
     (try (when context (.close context)) (catch Throwable _))
