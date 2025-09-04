@@ -419,11 +419,11 @@
      )
    ;; 18
    (fn [mainState]
-                           (let [open   "#jqxImageQuery"
-                                 panel  "#dropdownlistContentjqxImageQuery"
-                                 option (format "#listitem%dinnerListBoxjqxImageQuery" 0)]
-                             (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
-                           (Thread/sleep 1000)
+     (let [open   "#jqxImageQuery"
+      panel  "#dropdownlistContentjqxImageQuery"
+       option (format "#listitem%dinnerListBoxjqxImageQuery" 0)]
+       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+       (Thread/sleep 1000)
      )
    ;; 19
      (fn [mainState]
@@ -474,7 +474,6 @@
        (h/run-dropdown-select-handle! mainState "Select music by category" open panel option))
      (Thread/sleep 8000)
      )
-
    ])
 
 

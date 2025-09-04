@@ -272,8 +272,12 @@
                        (update res0 :screenshot #(or % (save-failure-screenshot! page {:prefix test-id}))))]
 
          (append-log! state res)
-         (println (if ok "[OK  ]" "[FAIL]") test-id "-" test-name
-                  (when-not ok (str "\n" (or (:error res) ""))))
+         ;(println (if ok "[OK  ]" "[FAIL]") test-id "-" test-name
+          ;        (when-not ok (str "\n" (or (:error res) ""))))
+
+         (println (clojure.string/join " " (remove nil?
+                          [(if ok "[OK  ]" "[FAIL]") test-id "-" test-name
+                          (when-not ok (str "\n" (or (:error res) "")))])))
          res)
 
        (catch AssertionError e
@@ -322,9 +326,7 @@
                    {:action "click-handle" :selector sel}
                    (finally (when h (.dispose h))))))))
 
-
 ;;======================================================
-
 
   ;;---------- END  Part 2 run one test  ------
 
@@ -380,21 +382,17 @@
 
 
 
-
 ;;-----------   email   ----------------
-;;;===============================
 
 (defn env
   "Return env var or nil."
   [k] (System/getenv (str k)))
 
-
-
 (defn mail
   "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
   [subject body-text attachment-path]
   (let [userID (env "MAIL_ID") userKEY (env "MAIL_KEY")]
-    (println "       userID: " userID " userKEY: " userKEY)
+    ;(println "       userID: " userID " userKEY: " userKEY)
     (if (and userID userKEY)
       (do
         (let [smtp-opts {:host "smtp.gmail.com"
@@ -422,7 +420,6 @@
   ))
 
 
-;;====================================
 ;; ---------- Part 3: cleanup ----------
 
 (defn cleanup!
