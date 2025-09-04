@@ -392,7 +392,7 @@
   "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
   [subject body-text attachment-path]
   (let [userID (env "MAIL_ID") userKEY (env "MAIL_KEY")]
-    ;(println "       userID: " userID " userKEY: " userKEY)
+    (println "       userID: " userID)
     (if (and userID userKEY)
       (do
         (let [smtp-opts {:host "smtp.gmail.com"

@@ -1,5 +1,6 @@
 (ns webtest.functionTest
   (:require [clojure.string :as str]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.pprint :refer [pprint]]
@@ -164,6 +165,7 @@
   (let [loc (.locator page key)
         handles (try (.elementHandles loc) (catch Exception _ nil))
         btn (some-> handles seq first)]
+    (println "btn: " btn)
     (cond
       (nil? btn)
       {:ok? false :action :click :key key :error "No element found for selector"}
@@ -177,7 +179,7 @@
           {:ok? false
            :action :click
            :key key
-           :label (try (.textContent ^ElementHandle btn) (catch Exception _ nil))
+           :label (try (.textContent ^ElementHandle btn) (catch Exception e (println "error: " e))) ; _ nil))
            :error (.getMessage e)})))))  ;; <- returns a map on all paths
 
 
@@ -480,6 +482,7 @@
 ;;; (functionTestSelection [3])
 
 (defn functionTestSelection
+     ;=====================
   "Arity-1: run ALL tests once in order.
    Arity-2: run the given 1-based positions in the SAME order (duplicates allowed)."
   ([mainState]

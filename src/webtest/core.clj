@@ -7,6 +7,7 @@
             [webtest.email :as email]
             [webtest.functionTest :as functionTest]
             [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
+  (:gen-class)
   (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
                                      Page Page$ScreenshotOptions
                                      Page$WaitForSelectorOptions Page$WaitForFunctionOptions
@@ -90,8 +91,6 @@
            fullpath))
 
 
-
-;;;===============================
 
 ;;====================================
 
@@ -315,62 +314,23 @@
         (catch Exception _
           nil)))
 
+
+ ;;--------  helper  ------------
+
+(defn parse-vector-arg [s]
+  (when (and (string? s) (str/starts-with? s "["))
+    (edn/read-string s))) ;; safely parse EDN vector
+
+(defn headed? [args]
+  (some #(= "headed" (str/lower-case %)) args))
+
+
 ;; --- Main ------------------------------------------------------------------
 
 ;;;    (def url "https://frankw42.github.io/public/index.html")
 ;;;    (def url "http://localhost:8080/examples/sample.html")
 ;;;    (def url "http://localhost:8080")
 
-
-(defn toggle-jqx-dropdown-with-checkOld
-  "Attempts to click the first `.jqx-dropdownlist` to open, waits 500ms,
-   checks for `#dropdownlistContentjqxImageQuery`, then clicks again to close.
-   Catches all exceptions; returns a map summarizing what succeeded/failed."
-  [^Page page & {:keys [timeout-ms] :or {timeout-ms 5000}}]
-  (let [widget-sel ".jqx-dropdownlist"
-        ;; attempt to get the widget, but catch any timeout or other errors
-        widget
-        (try
-          (let [wait-opts (doto (Page$WaitForSelectorOptions.) (.setTimeout timeout-ms))]
-            (.waitForSelector page widget-sel wait-opts))
-          (catch Exception e
-            (println "Warning: error locating widget:" (.getMessage e))
-            nil))
-        result-base {:widget-present (boolean widget)
-                     :opened? false
-                     :verified? false
-                     :closed? false}]
-    (if (nil? widget)
-      (assoc result-base :error (str "Widget not found: " widget-sel))
-      (let [open-res
-            (try
-              (.click ^com.microsoft.playwright.ElementHandle widget)
-              {:clicked? true}
-              (catch Exception e
-                {:clicked? false :error (str "open click failed: " (.getMessage e))}))
-            _ (Thread/sleep 500)
-            content
-            (try
-              (.querySelector page "#dropdownlistContentjqxImageQuery")
-              (catch Exception e
-                (println "Warning: error querying content element:" (.getMessage e))
-                nil))
-            verified? (boolean content)
-            close-res
-            (try
-              (.click ^com.microsoft.playwright.ElementHandle widget)
-              {:clicked? true}
-              (catch Exception e
-                {:clicked? false :error (str "close click failed: " (.getMessage e))}))]
-        {:widget-present true
-         :opened? (boolean (:clicked? open-res))
-         :verified? verified?
-         :closed? (boolean (:clicked? close-res))
-         :details {:open open-res
-                   :verify (if verified?
-                             {:found true}
-                             {:found false :reason "Content missing"})
-                   :close close-res}}))))
 
 (defn -main [& args]
       (print "\nStarting Playwright-based test...   version: 1.0.1 ")
@@ -379,8 +339,9 @@
 
   (load-params! state)
 
-  (let [[param-1 param-2 & rest] args]
-    (println "Command line param-1:" param-1 "param-2:" param-2 "others:" rest "\n")
+  (let [[param-1 param-2 & rest] args
+    selection (some parse-vector-arg rest)]
+    (println "Command line param-1:" param-1 "param-2:" param-2 "rest:" rest "\n")
     (if param-1
       (let [firstSavedUrl (get-in @state [:params (str param-1)])]
           ;(println "        firstSavedUrl: " firstSavedUrl)
@@ -390,29 +351,32 @@
           ) ; if
       ) ; if
 
-      ; (println "**** Will use URL: " (get @state "url"))
 
-    (when (= param-2 "owl")
-      (swap! state assoc :owlTest true)
-      (owl/owlTest state)
-      )
+      ; First  parameter identifies the URL of website to be tested.
+      ; Second parameter chooses the test suite:
+      ;          functionalTest:   Tests for Owl App webpage hosted on GitHub.
+      ;                 default:   Tests for Etaoin User Guide - Sample Page hosted locally.
+
 
     (when (= param-2 "functionTest")
       (swap! state assoc :owlTest true)
-      (if (= (first rest) "headed")
+      (if (headed? rest)
         (swap! state assoc :headless false)
         (swap! state assoc :headless true)
         )
-       ;;--- with only 1 param passed all test steps will be executed ---
-      (functionTest/functionTestSelection state) ; select tests from suite test list
-      )
 
+;;;
+;;;   ======== Tests for Owl App using framework harness  ===============
+;;;
+      (if selection    ;------  with only 1 param passed all test steps will be executed -
+        (functionTest/functionTestSelection state selection)  ;; 2-arity call
+        (functionTest/functionTestSelection state))
+      )
     ) ; let
 
   ;;;
-  ;;;    ======== add custom test for Owl   ===============
+  ;;;  ======== Tests for Sample Page, no framework used  ===============
   ;;;
-
   (if (not (:owlTest @state))
 
       (let [pw (Playwright/create)
@@ -489,8 +453,10 @@
 )
   )
 
- ;  clojure -M -m webtest.core   http://localhost:8080/examples/sample.html
-;;   clojure -M -m webtest.core owlUrl
-;;   clojure -M -m webtest.core owlUrl owl
+;; clojure -M -m webtest.core   http://localhost:8080/examples/sample.html
+;; clojure -M -m webtest.core owlUrl functionTest
+;; clojure -M -m webtest.core owlUrl functionTest headed
+;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3]"
 
-; clojure -M -m webtest.core owlUrl functionTest headed
+;; --- Demo error test case  ---
+;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 13 19 19 24]"
