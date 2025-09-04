@@ -35,12 +35,12 @@
   [subject body-text attachment-path]
   (let [smtp-opts {:host "smtp.gmail.com"
                    :port 587
-                   :user "frankw45@gmail.com"
-                   :pass "gnav nzzw uycs ktbf"    ;;; old:  "gzbd ljcs onez fouu"        new:  "gnav nzzw uycs ktbf"
+                   :user ""                         ;dddd  ????
+                   :pass ""                         ;dddd ????
                    :tls  true}
         report-file (io/file attachment-path)
-        msg {:from    "frankw45@gmail.com"
-             :to      ["frankw45@gmail.com"]
+        msg {:from    ""                            ;dddd ????
+             :to      [""]                          ;dddd ????
              :subject subject
              :body    [ ;; plain-text part
                        {:type    "text/plain"
@@ -123,7 +123,7 @@
     (download-and-handle page "#download-button" downloadPath)
 
     ;====  email test results  =======
-    ;====  to test email send downdown file for now dddd??? ===
+    ;====  to test email send download file for now dddd??? ===
     ;;  (mail "Owl test " downloadPath)
     )
   )
@@ -132,7 +132,7 @@
 (defn mailReportWithAttachment [page]
   ;====  email test report, attached report file from User Download dir ====
   (let [tim (str (ht/now))
-        testReport "place holder for test log file"
+        testReport "Owl Smoke Test Report. Log file attached."
         attachmentFileName "smokeTestReport.txt"
         attachmentFilePath (str file-path File/separator attachmentFileName)
         - (println "attachmentFileName:: " attachmentFileName " attachmentFilePath: " attachmentFilePath)

@@ -81,12 +81,8 @@
         (.hasTitle expected))
     {:actual-title (.title page)}))
 
-;==============   New Download   ======================================
-
-
 
 ;====================================================
-
 
 
 (defn dropdown-item-texts
@@ -493,7 +489,9 @@
    (let [p (:params @mainState)]
      (println "\n*** Suite Name:: " (p "suiteName"))
 
-     (h/setup! mainState {:headless? false :browser :chromium})
+     (println "mainState:: :headless: " (:headless @mainState))
+
+     (h/setup! mainState {:headless? (:headless @mainState) :browser :chromium})
      (println) (println "➡️  Navigating to:" (p "url"))
      (.navigate (get @mainState "page") (p "url"))
      (Thread/sleep 3000)
@@ -630,5 +628,6 @@
 ;  cd to playwright  dir
 ;clojure -M -m webtest.core owlUrl owl
 
+;---  no third param will run all test steps headless, optional: third param = headed   ---
 ; clojure -M -m webtest.core owlUrl functionTest
 

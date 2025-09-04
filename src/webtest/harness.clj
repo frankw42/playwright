@@ -381,31 +381,46 @@
 
 
 
-;;-----------   emaio   ----------------
+;;-----------   email   ----------------
 ;;;===============================
+
+(defn env
+  "Return env var or nil."
+  [k] (System/getenv (str k)))
+
+
 
 (defn mail
   "Sends an email whose text is `body-text` and attaches the file at `attachment-path`."
   [subject body-text attachment-path]
-  (let [smtp-opts {:host "smtp.gmail.com"
-                   :port 587
-                   :user "frankw45@gmail.com"
-                   :pass "gnav nzzw uycs ktbf"    ;;; old:  "gzbd ljcs onez fouu"        new:  "gnav nzzw uycs ktbf"
-                   :tls  true}
-        report-file (io/file attachment-path)
-        msg {:from    "frankw45@gmail.com"
-             :to      ["frankw45@gmail.com"]
-             :subject subject
-             :body    [ ;; plain-text part
-                       {:type    "text/plain"
-                        :content body-text}
-                       ;; attachment part
-                       {:type      :attachment
-                        :content   report-file
-                        :file-name (.getName report-file)
-                        }]}]
-    (email/send-test-report-email smtp-opts msg)
-    (println "Email sent with attachment:" (human-path(.getName report-file)))))
+
+  (let [userID (env "MAIL_ID") userKEY (env "MAIL_KEY")]
+    (if (and userID userKEY)
+      (do
+        (let [smtp-opts {:host "smtp.gmail.com"
+                         :port 587
+                         :user userID
+                         :pass userKEY
+                         :tls  true}
+              report-file (io/file attachment-path)
+              msg {:from   userID
+                   :to      [userKEY]
+                   :subject subject
+                   :body    [;; plain-text part
+                             {:type    "text/plain"
+                              :content body-text}
+                             ;; attachment part
+                             {:type      :attachment
+                              :content   report-file
+                              :file-name (.getName report-file)
+                              }]}]
+          (email/send-test-report-email smtp-opts msg)
+          (println "Email sent with attachment:" (human-path (.getName report-file))))
+          ) ;do
+      (println "Email not sent. Need to supply: MAIL_ID AND MAIL_KEY")
+   )  ;if
+  ))
+
 
 ;;====================================
 ;; ---------- Part 3: cleanup ----------
@@ -415,7 +430,7 @@
    Returns the updated state map."
   [state]
 
-   (mail "Owl test"  "place holder" (human-path (get @state "log-file" )))
+   (mail "Owl Test"  "Owl functional test.  Log file attached." (human-path (get @state "log-file" )))
 
 
                (println "Before cleanup:: state:  " state)

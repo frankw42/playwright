@@ -399,7 +399,11 @@
 
     (when (= param-2 "functionTest")
       (swap! state assoc :owlTest true)
-       ;;  (functionTest/functionTest state)
+      (if (= (first rest) "headed")
+        (swap! state assoc :headless false)
+        (swap! state assoc :headless true)
+        )
+       ;;--- with only 1 param passed all test steps will be executed ---
       (functionTest/functionTestSelection state) ; select tests from suite test list
       )
 
@@ -489,4 +493,4 @@
 ;;   clojure -M -m webtest.core owlUrl
 ;;   clojure -M -m webtest.core owlUrl owl
 
-; clojure -M -m webtest.core owlUrl functionTest
+; clojure -M -m webtest.core owlUrl functionTest headed

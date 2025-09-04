@@ -13,6 +13,3 @@
 ;;=====  location to create app passwords   =====
 ;; https://myaccount.google.com/apppasswords
 
-
-;;;  app password name:  autotest88
-;;;   gnav nzzw uycs ktbf
