@@ -1,0 +1,29 @@
+
+build docker container in  cljwork/demo  dir
+
+docker build -t playwright-clj-demo:0.1.0 .
+docker run --rm -v "${PWD}\target:/app/playwright/target" playwright-clj-demo:0.1.0
+
+
+save in docker hub
+
+
+docker image ls
+docker image prune -a
+docker save playwright-clj-demo:0.1.0 -o demo.tar
+docker load -i demo.tar
+
+---  login to docker image  ---
+
+
+docker run --rm -it --entrypoint bash playwright-clj-demo:0.1.0
+# fallback if bash not present:
+# docker run --rm -it --entrypoint sh playwright-clj-demo:0.1.0
+
+
+whoami
+ls -la /app
+ls -la /app/playwright
+java -version
+clojure -Sdescribe
+env | sort
