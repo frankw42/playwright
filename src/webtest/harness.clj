@@ -415,7 +415,7 @@
                               :file-name (.getName report-file)
                               }]}]
           (email/send-test-report-email smtp-opts msg)
-          (println "       Attempted:: email sent with attachment:"  (.getName report-file)))
+          (println "       Email sent with attachment:"  (.getName report-file)))
           ) ;do
       (println "To send email with log report configure: MAIL_ID AND MAIL_KEY environment vars")
    )  ;if
