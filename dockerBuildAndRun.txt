@@ -1,4 +1,71 @@
 
+;--- run docker and keep any output
+
+docker run -it `
+  -v pw-browsers:/ms-playwright `
+  -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright `
+  -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 `
+  --name clj-run `
+  clj-playwright owlUrl functionTest "[1 2 3]"
+
+
+;-- clean up any running images
+docker ps -a
+docker rm clj-run
+
+
+
+;--- run in Docker image headless
+
+docker run --rm `
+  -v pw-browsers:/ms-playwright `
+  -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright `
+  -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 `
+  clj-playwright owlUrl functionTest "[1 2 3]"
+  
+  
+  
+  ;--- setup named volume ---
+  
+  docker volume create clj-downloads
+  docker volume ls
+  
+  docker run --rm `
+  -v pw-browsers:/ms-playwright `
+  -v clj-downloads:/app/Downloads `
+  -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright `
+  -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 `
+  clj-playwright owlUrl functionTest
+  
+  
+  docker run --rm -it `
+  -v clj-downloads:/app/Downloads `
+  alpine ls -lh /app/Downloads
+  
+  
+  
+  docker run --rm -it  -v clj-downloads:/app/Downloads  alpine sh
+  
+  
+  
+  ;--- option 2  ---
+  
+  docker commit clj-run clj-run-snapshot
+docker run -it --entrypoint bash clj-run-snapshot
+cd /app/Downloads
+ls -lh
+
+
+  ;-- restart  ---
+  docker start -ai clj-run
+  
+  
+;-- after tests ran  login ---
+docker exec -it clj-run bash
+
+
+
+
 build docker container in  cljwork/demo  dir
 
 docker build -t playwright-clj-demo:0.1.0 .
@@ -16,7 +83,7 @@ docker load -i demo.tar
 ---  login to docker image  ---
 
 
-docker run --rm -it --entrypoint bash playwright-clj-demo:0.1.0
+docker run --rm -it --entrypoint bash clj-playwright
 # fallback if bash not present:
 # docker run --rm -it --entrypoint sh playwright-clj-demo:0.1.0
 
