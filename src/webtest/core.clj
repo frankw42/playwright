@@ -15,7 +15,10 @@
                                      ElementHandle Locator)
            (java.nio.file Paths)
            (java.time Instant)
-           (java.io File)))
+           (java.io File))
+
+  (:import [com.microsoft.playwright Playwright BrowserType$LaunchOptions])
+  )
 
 ;; --- State / sample params --------------------------------------------------
 
@@ -325,6 +328,8 @@
   (some #(= "headed" (str/lower-case %)) args))
 
 
+
+
 ;; --- Main ------------------------------------------------------------------
 
 ;;;    (def url "https://frankw42.github.io/public/index.html")
@@ -457,6 +462,8 @@
 ;; clojure -M -m webtest.core owlUrl functionTest
 ;; clojure -M -m webtest.core owlUrl functionTest headed
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3]"
+;; clojure -M -m webtest.core owlUrl functionTest headed "[13 14 13 14 24 13 14 13 24 24]"
+
 
 ;; --- Demo error test case  ---
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 13 19 19 24]"

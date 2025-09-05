@@ -1,25 +1,15 @@
 (ns webtest.harness
-  "Minimal Playwright test harness for Clojure.
-   - Part 1: setup!
-   - Part 2: run-test!
-   - Part 3: cleanup!
-   Extras: save-failure-screenshot!, append-log!"
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [webtest.download :as dl]
             [webtest.email :as email]
-            [clojure.pprint :as pprint]
-            )
-  (:import (com.microsoft.playwright Playwright BrowserType BrowserType$LaunchOptions
-                                     Page$ScreenshotOptions)
-           (com.microsoft.playwright.assertions PlaywrightAssertions)
-           (java.nio.file Paths)
-           (java.time Instant))
-
-  (:import [com.microsoft.playwright Page]
+            [clojure.pprint :as pprint])
+  (:import [com.microsoft.playwright Playwright Page Page$WaitForSelectorOptions
+                                     BrowserType$LaunchOptions Page$ScreenshotOptions]
            [com.microsoft.playwright.options WaitForSelectorState]
-           [com.microsoft.playwright Page$WaitForSelectorOptions])
-  )
+           [com.microsoft.playwright.assertions PlaywrightAssertions]
+           [java.nio.file Paths Path]
+           [java.time Instant]))
 
 ;; ---------- Extras ----------
 
@@ -59,7 +49,34 @@
 
 ;; ---------- Part 1: setup ----------
 
+
+
 (defn setup!
+  "Create Playwright, Chromium Browser, Context, Page. Store in `state` atom.
+   opts: {:headless? boolean}  (default true)"
+  [state]
+
+  (let [pw   (Playwright/create)
+        opts (doto (BrowserType$LaunchOptions.)
+              ;  (.setHeadless (boolean headless?)
+              (.setHeadless (:headless @state)
+               ))
+        br   (.. pw chromium (launch opts))
+        ctx  (.newContext br)
+        pg   (.newPage ctx)]
+    (swap! state assoc
+           "pw" pw
+           "browser" br
+           "context" ctx
+           "page" pg
+           "test-ctr" (or (get @state "test-ctr") 0))
+    (println "[SETUP]" "browser:" "chromium" "headless?" (:headless @state))
+    @state))
+
+
+
+
+(defn setup!OLd
   "Create Playwright, Browser, Context, Page from opts and store in `state`.
    - `state` is an atom (string keys like \"url\")
    - opts: {:headless? bool :browser :chromium|:firefox|:webkit}
@@ -232,7 +249,8 @@
 
 ;; ---------- failure screenshot ----------
 (defn- save-failure-screenshot! [page {:keys [prefix] :or {prefix "fail"}}]
-  (dl/save-bytes-with-timestamp! (str prefix "-screenshot.png") (.screenshot page)))
+  (dl/save-bytes-with-timestamp! (str prefix "-screenshot.png") (.screenshot page))
+  )
 
 ;; ---------- test wrapper (arity 3 & 4) ----------
 (defn- mk-test-id [n test-name]

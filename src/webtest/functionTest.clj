@@ -36,11 +36,73 @@
 "Sets the given file path into the first <input type=\"file\"> on the page,
  bypassing the OS picker."
 
-(defn upload-file [^com.microsoft.playwright.Page page file-path-str]
+
+(defn- file-exists? [^File f]
+  (and f (.exists f)))
+
+(defn- resource->tempfile ^String [res-name]
+  (let [tmp (doto (File/createTempFile "upload-" (str "-" res-name))
+              (.deleteOnExit))]
+    (with-open [in (io/input-stream (io/resource res-name))]
+      (io/copy in tmp))
+    (.getAbsolutePath tmp)))
+
+(defn resolve-upload-path
+  "Resolve absolute filesystem path for uploads.
+   Handles classpath resources, relative paths, absolute paths, and Docker /app/resources."
+  ^String [spec]
+  (let [spec* (if (str/starts-with? spec "resources/")
+                (subs spec (count "resources/"))
+                spec)
+        f (io/file spec)]
+    (cond
+      ;; Absolute path exists
+      (and (.isAbsolute f) (file-exists? f)) (.getAbsolutePath f)
+      ;; Relative path exists
+      (file-exists? f) (.getAbsolutePath f)
+      ;; Docker resource path exists (/app/resources/foo.json)
+      (file-exists? (io/file "resources" spec*)) (.getAbsolutePath (io/file "resources" spec*))
+      ;; Classpath resource (local dev)
+      (io/resource spec*) (resource->tempfile spec*)
+      :else
+      (throw (ex-info "Upload file not found"
+                      {:spec spec
+                       :tried [(.getAbsolutePath f)
+                               (str (io/file "resources" spec*))
+                               (str "classpath:" spec*)]})))))
+
+(defn upload-file
+  "Uploads a file into the Playwright file input element."
+  [^com.microsoft.playwright.Page page spec]
+  (let [abs (resolve-upload-path spec)
+        file-path (Paths/get abs (into-array String []))
+        file-input (.locator page "input[type=file]")]
+    (.setInputFiles file-input (into-array java.nio.file.Path [file-path])
+
+    )
+    true))
+
+
+;======================================
+
+
+(defn upload-fileOld
+  "Uploads a file using Playwright from the absolute path in /app/resources/."
+  [^com.microsoft.playwright.Page page file-rel-path]
+  ;; Build absolute path under /app/resources
+  (let [abs-path (.getAbsolutePath (io/file "resources" file-rel-path))
+        file-path (Paths/get abs-path (into-array String []))
+        file-input (.locator page "input[type=file]")]
+    (.setInputFiles file-input (into-array java.nio.file.Path [file-path]))
+    true))
+
+;===========================
+(defn upload-fileOld [^com.microsoft.playwright.Page page file-path-str]
   (let [file-path (java.nio.file.Paths/get file-path-str (into-array String []))
         file-input (.locator page "input[type=file]")]
     (.setInputFiles file-input (into-array java.nio.file.Path [file-path]))
     true))
+
 
 ;---------------------------------------------------------
 
@@ -165,7 +227,6 @@
   (let [loc (.locator page key)
         handles (try (.elementHandles loc) (catch Exception _ nil))
         btn (some-> handles seq first)]
-    (println "btn: " btn)
     (cond
       (nil? btn)
       {:ok? false :action :click :key key :error "No element found for selector"}
@@ -490,7 +551,7 @@
    (let [p (:params @mainState)]
      (println "\n**** Suite Name:: " (p "suiteName"))
 
-     (h/setup! mainState {:headless? (:headless @mainState) :browser :chromium})
+     (h/setup! mainState)
      (println "        Navigating to:" (p "url") "\n")
      (.navigate (get @mainState "page") (p "url"))
      (Thread/sleep 3000)
@@ -505,7 +566,7 @@
     (let [p (:params @mainState)]
       (println "\n*** Suite Name:: " (p "suiteName"))
 
-    (h/setup! mainState {:headless? false :browser :chromium})
+    (h/setup! mainState)
     (println "        Navigating to:" (p "url"))
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)
@@ -534,7 +595,7 @@
 
     ;=============   setup   ================================
 
-    (h/setup! mainState {:headless? false :browser :chromium})
+    (h/setup! mainState)
     (println) (println "        Navigating to:" (p "url"))
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)

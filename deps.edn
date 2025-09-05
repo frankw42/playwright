@@ -1,11 +1,14 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
         cheshire/cheshire {:mvn/version "5.11.0"}
-        com.draines/postal   {:mvn/version "2.0.4"}
+        com.draines/postal {:mvn/version "2.0.4"}
         com.microsoft.playwright/playwright {:mvn/version "1.54.0"}
-         ;;; io.github.frankw42/time-lib {:git/tag "v1.0" :git/sha "db32f36"}
+        time-lib/time-lib {:local/root "../time-lib"}}
 
-        time-lib/time-lib {:local/root "../time-lib"}
-
-        }
- :aliases {:run {:main-opts ["-m" "w est.core"]}}}
+ :aliases
+ {:run  {:main-opts ["-m" "webtest.core"]}
+  :uber {:deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+         :exec-fn  hf.depstar/uberjar
+         :exec-args {:jar "target/app.jar"
+                     :aot true
+                     :main-class webtest.core}}}}
