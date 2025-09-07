@@ -1,0 +1,17 @@
+# ---- build stage: makes target/app.jar
+FROM clojure:temurin-21-tools-deps AS builder
+WORKDIR /build
+COPY deps.edn ./
+COPY src ./src
+COPY resources ./resources
+COPY libs ./libs
+# build server jar
+RUN clj -X:uber-server
+
+# ---- runtime with Playwright browsers
+FROM mcr.microsoft.com/playwright/java:v1.54.0-noble
+ENV JAVA_TOOL_OPTIONS="-Xms128m -Xmx320m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError"
+WORKDIR /app
+COPY --from=builder /build/target/app.jar /app/app.jar
+EXPOSE 8080
+CMD ["java","-cp","/app/app.jar","clojure.main","-m","webtest.server"]
