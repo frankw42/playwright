@@ -6,9 +6,11 @@
             [clojure.pprint :refer [pprint]]
             [webtest.email :as email]
             [webtest.harness :as h]
+            [webtest.setup :as setup]
             [java-time.api :as jt]
             [clojure.pprint :as pprint]
             [webtest.download :as dl]
+            [webtest.upload :as up]
             [hello-time :as ht])
   (:import
     com.microsoft.playwright.Page
@@ -71,54 +73,27 @@
                                (str (io/file "resources" spec*))
                                (str "classpath:" spec*)]})))))
 
-(defn upload-file
-  "Uploads a file into the Playwright file input element."
-  [^com.microsoft.playwright.Page page spec]
-  (let [abs (resolve-upload-path spec)
-        file-path (Paths/get abs (into-array String []))
-        file-input (.locator page "input[type=file]")]
-    (.setInputFiles file-input (into-array java.nio.file.Path [file-path])
-
-    )
-    true))
-
-
-;======================================
-
-
-(defn upload-fileOld
-  "Uploads a file using Playwright from the absolute path in /app/resources/."
-  [^com.microsoft.playwright.Page page file-rel-path]
-  ;; Build absolute path under /app/resources
-  (let [abs-path (.getAbsolutePath (io/file "resources" file-rel-path))
-        file-path (Paths/get abs-path (into-array String []))
-        file-input (.locator page "input[type=file]")]
-    (.setInputFiles file-input (into-array java.nio.file.Path [file-path]))
-    true))
-
-;===========================
-(defn upload-fileOld [^com.microsoft.playwright.Page page file-path-str]
-  (let [file-path (java.nio.file.Paths/get file-path-str (into-array String []))
-        file-input (.locator page "input[type=file]")]
-    (.setInputFiles file-input (into-array java.nio.file.Path [file-path]))
-    true))
-
-
-;---------------------------------------------------------
 
 (defn make-upload-step
-  "Returns a step fn for h/run-test!. It uses the first <input type=file> on the page.
-   res-path is a fully-resolved path string (or however you resolve it upstream)."
-  [page res-path]
-  (fn [par]  ;  [{:keys [state]}]
-     ; (println "       Upload file: "  res-path)
-    (let [ok? (upload-file page res-path)
-          input (.locator page "input[type=file]")
-          dom-name (.evaluate input "(el)=> el && el.files && el.files[0] ? el.files[0].name : null")]
-      {:step :upload-test-step
-       :path res-path
-       :dom-file-name (when dom-name (str dom-name))
-       :ok (and ok? (boolean dom-name))})))
+  "Factory for h/run-test! callback.
+   Arity 1 (preferred): gets Page from ctx.
+   Arity 2 (legacy): captures Page directly."
+  ([res-path]                                    ;; preferred
+   (fn [{:keys [page]}]
+     (let [saved (up/upload-via-input! ^Page page res-path)
+           dom   (up/dom-first-file-name ^Page page)]
+       {:step :upload-test-step
+        :path saved
+        :dom-file-name (when dom (str dom))
+        :ok (boolean dom)})))
+  ([^Page page res-path]                          ;; legacy compatibility
+   (fn [_]
+     (let [saved (up/upload-via-input! ^Page page res-path)
+           dom   (up/dom-first-file-name ^Page page)]
+       {:step :upload-test-step
+        :path saved
+        :dom-file-name (when dom (str dom))
+        :ok (boolean dom)}))))
 
 
 ;========================================================
@@ -354,6 +329,19 @@
 
 
 (defn download-test-step
+  "Harness step: trigger a download and save it under /tmp/downloads."
+  [{:keys [state page]}]
+  (let [ctr    (-> (swap! state update :download-ctr (fnil inc 0)) :download-ctr)
+        prefix (format "%03d" (long ctr))
+        ;; TODO: replace selector with your real download control
+        saved  (dl/download-to-tmp! ^Page page (:paths @state) "#download-button" prefix)]
+    {:step :download-test-step
+     :download-path saved
+     :ok (.exists (io/file saved))}))
+
+
+
+(defn download-test-stepOld
   "Harness step: performs the actual download via dl/downLoadWithTimestamp.
    Receives {:keys [state page ...]} from the harness, must return a result map."
   [{:keys [state]}]
@@ -376,167 +364,175 @@
 (def steps
   [;; 1
    (fn [mainState]
-
-     (h/run-test! mainState "Title should be: Owl Buddy" title-step)
-     (Thread/sleep 1000)
-     )
+     (let [r (h/run-test! mainState "Title should be: Owl Buddy" title-step)]
+       (Thread/sleep 1000)
+       r))
    ;; 2
-   (fn [mainState]
-     (let [res-path "resources/owlBuddycloudinary.json"]      ;; or an absolute path you built earlier
-       (h/run-test! mainState (str "Upload:" res-path)
-                    (make-upload-step (get @mainState "page") res-path)))
-     (Thread/sleep 1000)
-     )
+   (fn [state]
+     (let [res-path "resources/owlBuddycloudinary.json"
+           r (h/run-test! state (str "Upload: " res-path)
+                          (make-upload-step res-path))]
+       (Thread/sleep 1000)
+       r))
+
    ;; 3
    (fn [mainState]
-     (h/run-test! mainState "Start flipbook animation" "#blink-button" extract-label-and-name)
+     (let [r  (h/run-test! mainState "Start flipbook animation" "#blink-button" extract-label-and-name)]
      (Thread/sleep 5000)
-     )
+     r))
 
    ;; 4
    (fn [mainState]
-     (h/run-test! mainState "Stop flipbook animation" "#blink-button" extract-label-and-name)
+     (let [r (h/run-test! mainState "Stop flipbook animation" "#blink-button" extract-label-and-name)]
      (Thread/sleep 8000)
-     )
+     r))
    ;; 5
    (fn [mainState]
-     (h/run-test! mainState "Download-test" download-test-step)
-     )
+     (let [r (h/run-test! mainState "Download test" download-test-step)]
+       (Thread/sleep 1000)
+       r))
+
    ;; 6
    (fn [mainState]
      (let [open   "#jqxImageQuery"
            panel  "#dropdownlistContentjqxImageQuery"
-           option (format "#listitem%dinnerListBoxjqxImageQuery" 0)]
-       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+           option (format "#listitem%dinnerListBoxjqxImageQuery" 0)
+           r (h/run-dropdown-select-handle! mainState "Select image by category" open panel option)]
      (Thread/sleep 1000)
-     )
+     r))
    ;; 7
    (fn [mainState]
      (let [open   "#jqxImageQuery"
            panel  "#dropdownlistContentjqxImageQuery"
-           option (format "#listitem%dinnerListBoxjqxImageQuery" 1)]
-       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+           option (format "#listitem%dinnerListBoxjqxImageQuery" 1)
+       r (h/run-dropdown-select-handle! mainState "Select image by category" open panel option)]
      (Thread/sleep 1000)
-     )
+     r))
    ;; 8
    (fn [mainState]
      (let [open   "#jqxImageQuery"
            panel  "#dropdownlistContentjqxImageQuery"
-           option (format "#listitem%dinnerListBoxjqxImageQuery" 2)]
-       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+           option (format "#listitem%dinnerListBoxjqxImageQuery" 2)
+           r (h/run-dropdown-select-handle! mainState "Select image by category" open panel option)]
      (Thread/sleep 1000)
-     )
+     r))
    ;; 9
    (fn [mainState]
      (let [open   "#jqxImageQuery"
            panel  "#dropdownlistContentjqxImageQuery"
-           option (format "#listitem%dinnerListBoxjqxImageQuery" 3)]
-       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+           option (format "#listitem%dinnerListBoxjqxImageQuery" 3)
+           r (h/run-dropdown-select-handle! mainState "Select image by category" open panel option)]
      (Thread/sleep 1000)
-     )
+     r))
    ;; 10
    (fn [mainState]
      (let [open   "#jqxMusicQuery"
            panel  "#dropdownlistContentjqxMusicQuery"
-           option (format "#listitem%dinnerListBoxjqxMusicQuery" 0)]
-       (h/run-dropdown-select-handle! mainState "Select music track by category" open panel option))
+           option (format "#listitem%dinnerListBoxjqxMusicQuery" 0)
+           r (h/run-dropdown-select-handle! mainState "Select music track by category" open panel option)]
      (Thread/sleep 4000)
-     )
-
+    r))
    ;; 11
    (fn [mainState]
-     (h/run-test! mainState "Start flipbook animation" "#blink-button" extract-label-and-name)
+     (let [r (h/run-test! mainState "Start flipbook animation" "#blink-button" extract-label-and-name)]
      (Thread/sleep 3000)
-     )
-
+     r))
    ;; 12
    (fn [mainState]
-     (h/run-test! mainState "Stop flipbook animation" "#blink-button" extract-label-and-name)
+     (let [r (h/run-test! mainState "Stop flipbook animation" "#blink-button" extract-label-and-name)]
      (Thread/sleep 8000)
-     )
+     r))
    ;; 13
    (fn [mainState]
-     (h/run-test! mainState "Show Info panel" "#info-button" extract-label-and-name)
+     (let [r (h/run-test! mainState "Show Info panel" "#info-button" extract-label-and-name)]
      (Thread/sleep 4000)
-     )
+     r))
    ;; 14
    (fn [mainState]
-     (h/run-test! mainState "Hide Info panel" "#info-button" extract-label-and-name)
+     (let [r (h/run-test! mainState "Hide Info panel" "#info-button" extract-label-and-name)]
      (Thread/sleep 2000)
-     )
+     r))
    ;; 15
    (fn [mainState]
      ;--- note  precondition: download button must be clickable - clickable
-     (h/run-test! mainState "Download-test" download-test-step)
+     (let [r (h/run-test! mainState "Download-test" download-test-step)]
      (Thread/sleep 2000)
-     )
+     r))
+
    ;; 16
    (fn [mainState]
-     (h/run-click-handle!  mainState "Start flipbook animation"  "#blink-button")
+     (let [r (h/run-click-handle!  mainState "Start flipbook animation"  "#blink-button")]
      (Thread/sleep 2000)
-     )
+     r))
    ;; 17
    (fn [mainState]
-     (h/run-click-handle!  mainState "Start tilt animation"  "#tilt-button")
+     (let [r (h/run-click-handle!  mainState "Start tilt animation"  "#tilt-button")]
      (Thread/sleep 2000)
-     )
+     r))
    ;; 18
    (fn [mainState]
      (let [open   "#jqxImageQuery"
       panel  "#dropdownlistContentjqxImageQuery"
-       option (format "#listitem%dinnerListBoxjqxImageQuery" 0)]
-       (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+       option (format "#listitem%dinnerListBoxjqxImageQuery" 0)
+       r (h/run-dropdown-select-handle! mainState "Select image by category" open panel option)]
        (Thread/sleep 1000)
-     )
+     r))
    ;; 19
      (fn [mainState]
        (let [open   "#jqxImageQuery"
              panel  "#dropdownlistContentjqxImageQuery"
-             option (format "#listitem%dinnerListBoxjqxImageQuery" 1)]
-         (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+             option (format "#listitem%dinnerListBoxjqxImageQuery" 1)
+             r (h/run-dropdown-select-handle! mainState "Select image by category" open panel option)]
        (Thread/sleep 1000)
-     )
+       r))
    ;; 20
      (fn [mainState]
        (let [open   "#jqxImageQuery"
              panel  "#dropdownlistContentjqxImageQuery"
-             option (format "#listitem%dinnerListBoxjqxImageQuery" 2)]
-         (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+             option (format "#listitem%dinnerListBoxjqxImageQuery" 2)
+             r (h/run-dropdown-select-handle! mainState "Select image by category" open panel option)]
        (Thread/sleep 1000)
-     )
+       r))
    ;; 21
      (fn [mainState]
        (let [open   "#jqxImageQuery"
              panel  "#dropdownlistContentjqxImageQuery"
-             option (format "#listitem%dinnerListBoxjqxImageQuery" 3)]
-         (h/run-dropdown-select-handle! mainState "Select image by category" open panel option))
+             option (format "#listitem%dinnerListBoxjqxImageQuery" 3)
+             r (h/run-dropdown-select-handle! mainState "Select image by category" open panel option)]
        (Thread/sleep 1000)
-     )
+       r))
    ;; 22
    (fn [mainState]
      (let [open   "#jqxMusicQuery"
            panel  "#dropdownlistContentjqxMusicQuery"
-           option (format "#listitem%dinnerListBoxjqxMusicQuery" 0)]
-       (h/run-dropdown-select-handle! mainState "Select music by category" open panel option))
+           option (format "#listitem%dinnerListBoxjqxMusicQuery" 0)
+           r (h/run-dropdown-select-handle! mainState "Select music by category" open panel option)]
      (Thread/sleep 8000)
-     )
+     r))
 
    ;; 23
    (fn [mainState]
      (let [open   "#jqxMusicQuery"
            panel  "#dropdownlistContentjqxMusicQuery"
-           option (format "#listitem%dinnerListBoxjqxMusicQuery" 1)]
-       (h/run-dropdown-select-handle! mainState "Select music by category" open panel option))
+           option (format "#listitem%dinnerListBoxjqxMusicQuery" 1)
+           r (h/run-dropdown-select-handle! mainState "Select music by category" open panel option)]
      (Thread/sleep 8000)
-     )
+     r))
    ;; 24
    (fn [mainState]
      (let [open   "#jqxMusicQuery"
            panel  "#dropdownlistContentjqxMusicQuery"
-           option (format "#listitem%dinnerListBoxjqxMusicQuery" 2)]
-       (h/run-dropdown-select-handle! mainState "Select music by category" open panel option))
+           option (format "#listitem%dinnerListBoxjqxMusicQuery" 2)
+           r (h/run-dropdown-select-handle! mainState "Select music by category" open panel option)]
      (Thread/sleep 8000)
-     )
+     r))
+
+   ;;25
+   (fn [mainState]
+     (let [r (h/run-test! mainState "Force fail test"
+                          (fn [_] (throw (ex-info "        intentional failure" {:step 25}))))]
+       (Thread/sleep 1000)
+       r))
    ])
 
 
@@ -547,13 +543,14 @@
   "Arity-1: run ALL tests once in order.
    Arity-2: run the given 1-based positions in the SAME order (duplicates allowed)."
   ([mainState]
-
+  ;===========
    (let [p (:params @mainState)]
      (println "\n**** Suite Name:: " (p "suiteName"))
 
-     (h/setup! mainState)
+     (setup/setup! mainState)
      (println "        Navigating to:" (p "url") "\n")
-     (.navigate (get @mainState "page") (p "url"))
+    ;;;dddd  (.navigate (get @mainState "page") (p "url"))
+     (.navigate (:page @mainState) (p "url"))
      (Thread/sleep 3000)
 
      (mapv #(% mainState) steps))
@@ -562,13 +559,15 @@
    )
 
    ([mainState positions]
-
+   ;=====================
     (let [p (:params @mainState)]
       (println "\n*** Suite Name:: " (p "suiteName"))
 
-    (h/setup! mainState)
+    (setup/setup! mainState)
     (println "        Navigating to:" (p "url"))
-    (.navigate (get @mainState "page") (p "url"))
+          ; (println "mainState: "  @mainState)
+      (.navigate ^com.microsoft.playwright.Page (:page @mainState) (p "url"))
+
     (Thread/sleep 3000)
 
     (mapv (fn [pos]
@@ -579,7 +578,6 @@
 
     (h/cleanup! mainState)
     )
-
   )
 
 
@@ -595,7 +593,7 @@
 
     ;=============   setup   ================================
 
-    (h/setup! mainState)
+    (setup/setup! mainState)
     (println) (println "        Navigating to:" (p "url"))
     (.navigate (get @mainState "page") (p "url"))
     (Thread/sleep 3000)

@@ -338,7 +338,7 @@
 
 
 (defn -main [& args]
-      (print "\nStarting Playwright-based test...   version: 1.0.1 ")
+      (print "\nStarting Playwright-based test...   version: 1.0.2 ")
       (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
       (println "\nTime:  " (ht/time-str (ht/now)) "\n")
 
@@ -467,3 +467,6 @@
 
 ;; --- Demo error test case  ---
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 13 19 19 24]"
+;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25]"
+
+;; clojure -M -m webtest.core owlUrl functionTest headed "[5]"

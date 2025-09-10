@@ -5,7 +5,7 @@
            )
 
   (:import
-    (com.microsoft.playwright Page))
+    (com.microsoft.playwright Page Download  Page$WaitForSelectorOptions))
   )
 
 (defn user-downloads-dir ^java.nio.file.Path []
@@ -48,21 +48,14 @@
     (.getAbsolutePath f)))
 
 
-
 (defn download-and-handle
   [^Page page selector dest-path]
-     ; (println "download-and-handle:: page: " page)
-     ; (println  "Is visible:: " selector  " = "  (.isVisible page selector) )
-
-  ;(let [btn (.locator page selector)]
-  ;  (.isVisible (PlaywrightAssertions/assertThat btn)) ; waits under the hood
-   ; (.click btn))
 
   ;; 1. Kick off the download and wait for it to complete
   (let [download
-        (.waitForDownload page
+        (.waitForDownload ^com.microsoft.playwright.Page page
                           (fn []
-                            (.click page selector)))
+                            (.click ^com.microsoft.playwright.Page page selector)))
 
         ;; 2. Get the temp path where Playwright saved it
         temp-path (.path download)]
@@ -94,10 +87,28 @@
                     :or   {selector "#download-button"
                            prefix   "downloadFile"
                            ext      ".txt"}}]
-  (let [page   (get @state "page")
+  (let [page   (:page @state )
         ts     (clojure.string/replace (str (java.time.Instant/now)) ":" "-")
         fname  (str counter "-" prefix "-" ts ext)
         ;; build the destination using java.nio Paths (no manual separators)
         dest   (-> (user-downloads-dir) (.resolve fname) str)]
       ; (println "downLoadWithTimestamp →" dest)
     (download-and-handle page selector dest)))
+
+
+
+
+
+(defn download-to-tmp!
+  "Clicks `click-selector`, waits for the download, saves into (:downloads paths).
+   Optional `prefix` is prepended to the filename. Returns absolute path."
+  (^String [^Page page paths click-selector]
+   (download-to-tmp! page paths click-selector nil))
+  (^String [^Page page paths click-selector prefix]
+   (let [dl    (.waitForDownload page #( .click page click-selector))
+         fname (.suggestedFilename dl)
+         name  (if (seq (str prefix)) (str prefix "-" fname) fname)
+         out   (io/file (:downloads paths) name)]
+     (io/make-parents out)
+     (.saveAs dl (.toPath out))
+     (.getAbsolutePath out))))

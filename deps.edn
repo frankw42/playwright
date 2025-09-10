@@ -3,12 +3,24 @@
         cheshire/cheshire {:mvn/version "5.11.0"}
         com.draines/postal {:mvn/version "2.0.4"}
         com.microsoft.playwright/playwright {:mvn/version "1.54.0"}
-        time-lib/time-lib {:local/root "../time-lib"}}
+        http-kit/http-kit {:mvn/version "2.7.0"}
+        ;; FIX THIS before build: see step 4
+        time-lib/time-lib {:local/root "libs/time-lib"}}
 
  :aliases
  {:run  {:main-opts ["-m" "webtest.core"]}
-  :uber {:deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
-         :exec-fn  hf.depstar/uberjar
-         :exec-args {:jar "target/app.jar"
-                     :aot true
-                     :main-class webtest.core}}}}
+
+  :smoke {:main-opts ["-m" "webtest.smoke"]}
+
+  :uber-core   {:deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+                :exec-fn  hf.depstar/uberjar
+                :exec-args {:jar "target/app.jar" :aot true :main-class webtest.core}}
+
+  :uber-server
+  {:deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
+   :exec-fn  hf.depstar/uberjar
+   :exec-args {:jar "target/app.jar"
+               :aot false
+               :main-class "clojure.main"
+               :main-args ["-m" "webtest.server"]}}
+                }}
