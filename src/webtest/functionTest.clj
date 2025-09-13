@@ -340,22 +340,6 @@
      :ok (.exists (io/file saved))}))
 
 
-
-(defn download-test-stepOld
-  "Harness step: performs the actual download via dl/downLoadWithTimestamp.
-   Receives {:keys [state page ...]} from the harness, must return a result map."
-  [{:keys [state]}]
-  ;; Maintain your own counter for downloads (per run)
-  (let [counter (get (swap! state update "download-ctr" (fnil inc 0)) "download-ctr")
-        dest    (dl/downLoadWithTimestamp state counter)
-        exists? (.exists (io/file dest))]
-    {:step          :download-test-step
-     :download-path dest
-     :ok            (boolean exists?)
-     :note          (when-not exists? "Downloaded file not found on disk after copy.")}))
-
-
-
 ;
 ;========   Wrap tests for selection   ==========
 
@@ -535,6 +519,12 @@
        r))
    ])
 
+(defn show-version []
+  (print "\nStarting Playwright-based test...   version: 1.0.3 ")
+  (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
+  (println "\nTime:  " (ht/time-str (ht/now)) "\n")
+)
+
 
 ;;; (functionTestSelection [3])
 
@@ -542,8 +532,10 @@
      ;=====================
   "Arity-1: run ALL tests once in order.
    Arity-2: run the given 1-based positions in the SAME order (duplicates allowed)."
+
   ([mainState]
   ;===========
+   (show-version)
 
    (let [p (:params @mainState)]
      (println "\n**** Suite Name:: " (p "suiteName"))
@@ -565,6 +557,8 @@
 
    ([mainState positions]
    ;=====================
+    (show-version)
+
     (let [p (:params @mainState)]
       (println "\n*** Suite Name:: " (p "suiteName"))
       (try

@@ -335,9 +335,9 @@
 
 
 (defn -main [& args]
-      (print "\nStarting Playwright-based test...   version: 1.0.2 ")
-      (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
-      (println "\nTime:  " (ht/time-str (ht/now)) "\n")
+    ;dddd  (print "\nStarting Playwright-based test...   version: 1.0.2 ")
+    ;dddd  (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
+    ;dddd  (println "\nTime:  " (ht/time-str (ht/now)) "\n")
 
   (load-params! state)
 
@@ -466,8 +466,7 @@
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 13 19 19 24]"
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25]"
 
-;; clojure -M -m webtest.core owlUrl functionTest headed "[5]"
+;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3]"
 
-;; $env:MAIL_ID="you@example.com"; $env:MAIL_KEY="kkkkkkkkkkkk"; clojure -M -m webtest.core owlUrl functionTest "[1 2 3]"
-
+;; $env:MAIL_ID="you@example.com"; $env:MAIL_KEY="kkkkkkkkkk"; clojure -M -m webtest.core owlUrl functionTest "[1 2 3]"
 ;; $env:MAIL_ID="you@example.com"; $env:MAIL_KEY=""; clojure -M -m webtest.core owlUrl functionTest "[1 2 3]"
