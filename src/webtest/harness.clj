@@ -5,7 +5,7 @@
     [webtest.log :as log]
     [webtest.junit :as junit]
     [webtest.browser :as browser]
-    [webtest.setup :as setup]
+    [webtest.helpers :as helpers]
     [webtest.email :as email])
   (:import (com.microsoft.playwright Page Page$WaitForSelectorOptions)
            (com.microsoft.playwright.options WaitForSelectorState)
@@ -57,7 +57,7 @@
                        res0
                        (update res0 :screenshot #(or % (try (browser/save-screenshot! page paths test-id)
                                                             (catch Throwable _ nil)))))]
-         (log/append-log! {:logs logs} res)
+         (log/append-log! state (merge {:logs (:logs paths)} res))
          (println (clojure.string/join " " (remove nil?
             [(if ok "[OK  ]" "[FAIL]") test-id "-" test-name
               (when-not ok (str "\n" (or (:error res) "")))])))
@@ -72,7 +72,7 @@
                        :error (.getMessage e) :started (str started)
                        :ended (str ended) :duration-ms dur-ms
                        :screenshot shot :class "AssertionError"}]
-           (log/append-log! {:logs (:logs paths)} res)
+           (log/append-log! state (merge {:logs (:logs paths)} res))
            ;; FAIL
            (let [msg (.getMessage e)]
              (println (str/join " " (remove nil?
@@ -89,7 +89,7 @@
                        :error (.getMessage e) :started (str started)
                        :ended (str ended) :duration-ms dur-ms
                        :screenshot shot :class (.getName (class e))}]
-           (log/append-log! {:logs (:logs paths)} res)
+           (log/append-log! state (merge {:logs (:logs paths)} res))
            ;; ERR
            (let [msg (.getMessage e)]
              (println (str/join " " (remove nil?
@@ -196,28 +196,10 @@
 
 (defn- env [k] (System/getenv (str k)))
 
-(defn ^:private send-log-email! [state]
-
-  (when (= "1" (System/getenv "SEND_EMAIL"))
-
-    (let [user-id (env "MAIL_ID")
-          user-key (env "MAIL_KEY")
-          attach (io/file (-> @state :paths :logs) "test-log.txt")]
-      (when (and user-id user-key (.exists attach))
-        (let [smtp-opts {:host "smtp.gmail.com" :port 587 :user user-id :pass user-key :tls true}
-              msg {:from user-id :to user-id :subject "Owl Test"
-                   :body [{:type "text/plain" :content "Owl functional test. Log file attached."}
-                          {:type :attachment :content attach :file-name (.getName attach)}]}]
-          (email/send-test-report-email smtp-opts msg)
-          (println "Email sent with attachment:" (.getName attach)))))
-
-    )
-  )
-
 (defn cleanup!
   "Close page/context/browser/pw and remove them from state."
   [state]
-  (send-log-email! state)
+  (helpers/send-log-email! state)
   (let [{:keys [page context browser pw]} @state]
     (try (when page (.close page)) (catch Throwable _))
     (try (when context (.close context)) (catch Throwable _))

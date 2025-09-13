@@ -544,39 +544,45 @@
    Arity-2: run the given 1-based positions in the SAME order (duplicates allowed)."
   ([mainState]
   ;===========
+
    (let [p (:params @mainState)]
      (println "\n**** Suite Name:: " (p "suiteName"))
 
+     (try
      (setup/setup! mainState)
+
      (println "        Navigating to:" (p "url") "\n")
-    ;;;dddd  (.navigate (get @mainState "page") (p "url"))
      (.navigate (:page @mainState) (p "url"))
      (Thread/sleep 3000)
 
-     (mapv #(% mainState) steps))
+     (mapv #(% mainState) steps)
 
-   (h/cleanup! mainState)
-   )
+   ;;; dddd  (h/cleanup! mainState)
+
+     (finally
+       (setup/finish! mainState))) ))
+
 
    ([mainState positions]
    ;=====================
     (let [p (:params @mainState)]
       (println "\n*** Suite Name:: " (p "suiteName"))
-
-    (setup/setup! mainState)
-    (println "        Navigating to:" (p "url"))
+      (try
+        (setup/setup! mainState)
+        (println "        Navigating to:" (p "url"))
           ; (println "mainState: "  @mainState)
-      (.navigate ^com.microsoft.playwright.Page (:page @mainState) (p "url"))
+        (.navigate ^com.microsoft.playwright.Page (:page @mainState) (p "url"))
 
-    (Thread/sleep 3000)
+        (Thread/sleep 3000)
 
-    (mapv (fn [pos]
+       (mapv (fn [pos]
             (if-let [step (nth steps (dec pos) nil)]
               (step mainState)
               {:position pos :ok false :error :no-such-test}))
-          positions))
+          positions)
 
-    (h/cleanup! mainState)
+      (finally
+        (setup/finish! mainState))) )
     )
   )
 

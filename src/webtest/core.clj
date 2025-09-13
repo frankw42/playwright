@@ -2,9 +2,6 @@
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
-            [clojure.pprint :refer [pprint]]
-            [webtest.owl :as owl]
-            [webtest.email :as email]
             [webtest.functionTest :as functionTest]
             [hello-time :as ht]) ;; if unavailable swap to (java.time.Instant/now)
   (:gen-class)
@@ -470,3 +467,7 @@
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25]"
 
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[5]"
+
+;; $env:MAIL_ID="you@example.com"; $env:MAIL_KEY="kkkkkkkkkkkk"; clojure -M -m webtest.core owlUrl functionTest "[1 2 3]"
+
+;; $env:MAIL_ID="you@example.com"; $env:MAIL_KEY=""; clojure -M -m webtest.core owlUrl functionTest "[1 2 3]"

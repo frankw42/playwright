@@ -1,18 +1,12 @@
 (ns webtest.log
   (:require [clojure.java.io :as io]
-            [clojure.pprint :as pp]
-            [clojure.instant :as inst]))
-
-(defn utc-now [] (.toString (java.time.Instant/now)))
+            [webtest.paths :as paths]))
 
 (defn append-log!
-  "EDN one-line log + human-readable log."
-  [{:keys [logs]} m]
-  (let [m* (assoc m :ts (utc-now))
-        edn (io/file logs "test-log.edn")
-        txt (io/file logs "test-log.txt")]
-    (.mkdirs (.getParentFile edn))
-    (spit edn (str (pr-str m*) "\n") :append true)
-    (with-open [w (io/writer txt :append true)]
-      (pp/pprint m* w))
-    m*))
+  "Append one or more maps to the run EDN log. Requires `state`."
+  ([state m]
+   (let [f (paths/edn-target state)]
+     (io/make-parents f)
+     (spit f (str (pr-str m) "\n") :append true)))
+  ([state m & ms]
+   (append-log! state (apply merge m (filter map? ms)))))
