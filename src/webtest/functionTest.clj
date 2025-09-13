@@ -1,14 +1,15 @@
 (ns webtest.functionTest
   (:require [clojure.string :as str]
-            [clojure.edn :as edn]
+         ;   [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.edn :as edn]
-            [clojure.pprint :refer [pprint]]
+         ;   [clojure.edn :as edn]
+         ;   [clojure.pprint :refer [pprint]]
             [webtest.email :as email]
             [webtest.harness :as h]
             [webtest.setup :as setup]
-            [java-time.api :as jt]
-            [clojure.pprint :as pprint]
+            [webtest.console :as console]
+        ;    [java-time.api :as jt]
+         ;   [clojure.pprint :as pprint]
             [webtest.download :as dl]
             [webtest.upload :as up]
             [hello-time :as ht])
@@ -25,7 +26,6 @@
     java.io.File)
 
   (:import [com.microsoft.playwright Page ElementHandle])
-
   (:import
     (com.microsoft.playwright Page)
      ;;;;  (com.microsoft.playwright.options WaitUntil State)
@@ -535,6 +535,9 @@
 
   ([mainState]
   ;===========
+
+   (console/with-console-tee mainState
+   (fn []
    (show-version)
 
    (let [p (:params @mainState)]
@@ -549,14 +552,15 @@
 
      (mapv #(% mainState) steps)
 
-   ;;; dddd  (h/cleanup! mainState)
-
      (finally
-       (setup/finish! mainState))) ))
+       (setup/finish! mainState))) )) ))
 
 
    ([mainState positions]
    ;=====================
+
+    (console/with-console-tee mainState
+    (fn []
     (show-version)
 
     (let [p (:params @mainState)]
@@ -576,7 +580,7 @@
           positions)
 
       (finally
-        (setup/finish! mainState))) )
+        (setup/finish! mainState))) ) ))
     )
   )
 

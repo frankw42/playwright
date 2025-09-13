@@ -41,3 +41,9 @@
 (defn ts              [state] (get-in @state [:run :ts] (t/utc-ts)))
 (defn screenshot-path [state label]
   (format "%s/%s-%s.png" (screenshots-dir state) label (ts state)))
+
+(defn artifacts-dir [state]
+  (get-in @state [:run :dirs :artifacts] "/tmp/artifacts"))
+
+(defn artifact-path [state name]
+  (format "%s/%s-%s" (artifacts-dir state) name (ts state)))

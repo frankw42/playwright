@@ -464,7 +464,7 @@
 
 ;; --- Demo error test case  ---
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 13 19 19 24]"
-;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25]"
+;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24]"
 
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3]"
 
