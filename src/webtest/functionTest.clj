@@ -519,8 +519,8 @@
        r))
    ])
 
-(defn show-version []
-  (print "\nStarting Playwright-based test...   version: 1.0.3 ")
+(defn show-version [mainState]
+  (print "\nStarting Playwright-based test... Version:" (:version @mainState) "  ")
   (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
   (println "\nTime:  " (ht/time-str (ht/now)) "\n")
 )
@@ -538,7 +538,7 @@
 
    (console/with-console-tee mainState
    (fn []
-   (show-version)
+   (show-version mainState)
 
    (let [p (:params @mainState)]
      (println "\n**** Suite Name:: " (p "suiteName"))
@@ -561,7 +561,7 @@
 
     (console/with-console-tee mainState
     (fn []
-    (show-version)
+    (show-version mainState)
 
     (let [p (:params @mainState)]
       (println "\n*** Suite Name:: " (p "suiteName"))

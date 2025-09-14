@@ -21,6 +21,28 @@
 
 (defonce state (atom {:index 0 :numInputs 0 :countInputs 0 :owlTest false  "url" "https://frankw42.github.io/public/index.html"}))
 
+;; version: 1.0.3
+
+(def VERSION "1.0.3")
+(swap! state assoc :version VERSION)
+
+(defn print-usage []
+  (println "Usage:")
+  (println "  clojure -M -m webtest.core owlUrl functionTest [headed|headless] \"[tests]\"")
+  (println "  clojure -M -m webtest.core owlUrl functionTest headed \"[1 2 3]\"")
+  (println "  clojure -M -m webtest.core owlUrl functionTest headed \"[10 2 1 25]\"")
+  (println "\nOptions:")
+  (println "  -h, --help       Show help")
+  (println "  -v, --version    Show version"))
+
+(defn handle-top-flags [args]
+  (cond
+    (some #{"-h" "--help" "help"} args) (do (print-usage) (System/exit 0))
+    (some #{"-v" "--version" "version"} args) (do (println (:version @state)) (System/exit 0))
+    :else args))
+
+
+
 (def params
   {"username" "Henry"
    "password" "abc"
@@ -335,9 +357,8 @@
 
 
 (defn -main [& args]
-    ;dddd  (print "\nStarting Playwright-based test...   version: 1.0.2 ")
-    ;dddd  (println "Current time is:" (try (str (ht/now)) (catch Exception _ (Instant/now))))
-    ;dddd  (println "\nTime:  " (ht/time-str (ht/now)) "\n")
+
+  (handle-top-flags args)
 
   (load-params! state)
 
@@ -455,7 +476,9 @@
 )
   )
 
-;; clojure -M -m webtest.core   http://localhost:8080/examples/sample.html
+;; clojure -M -m webtest.core -v
+;; clojure -M -m webtest.core -h
+
 ;; clojure -M -m webtest.core owlUrl functionTest
 ;; clojure -M -m webtest.core owlUrl functionTest headed
 ;; clojure -M -m webtest.core owlUrl functionTest headed "[1 2 3]"
@@ -470,3 +493,8 @@
 
 ;; $env:MAIL_ID="you@example.com"; $env:MAIL_KEY="kkkkkkkkkk"; clojure -M -m webtest.core owlUrl functionTest "[1 2 3]"
 ;; $env:MAIL_ID="you@example.com"; $env:MAIL_KEY=""; clojure -M -m webtest.core owlUrl functionTest "[1 2 3]"
+
+;; initial experiment
+;; clojure -M -m webtest.core   http://localhost:8080/examples/sample.html
+
+
