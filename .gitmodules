@@ -1,0 +1,4 @@
+[submodule "libs/time-lib"]
+	path = libs/time-lib
+	url = https://github.com/frankw42/time-lib.git
+	branch = main
