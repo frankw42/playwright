@@ -1,0 +1,5 @@
+docker run --rm `
+  -v jenkins_home:/var/jenkins_home `
+  -w /var/jenkins_home/workspace/playwright-Testing `
+  frankw0042/clj-playwright:1.54.0 `
+  bash -lc 'pwd; ls -la; clojure -Spath | tr : "\n" | grep workspace/playwright-Testing/src; clojure -M -m webtest.core owlUrl functionTest "[1 2 3]"'

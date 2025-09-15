@@ -1,0 +1,29 @@
+
+jenkins console:
+
+http://localhost:8080
+
+docker ps --filter "name=jenkins"
+
+
+;==== if not running   ===
+
+docker start jenkins
+docker logs -f jenkins
+
+
+
+;==============  To view results:  =======================
+
+http://localhost:8080/job/playwright-Testing/
+
+Last build:
+http://localhost:8080/job/playwright-Testing/lastBuild/
+
+;=========  download archive files  =======================
+
+http://localhost:8080/job/playwright-Testing/lastBuild/artifact/*zip*/artifacts.zip
+
+
+
+
