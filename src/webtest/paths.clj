@@ -6,7 +6,7 @@
 (defn ensure-dirs!
   ([] (ensure-dirs! "Function Test"))
   ([suite]
-   (let [ts   (t/utc-ts)
+   (let [ts (or (System/getenv "RUN_TS") (t/utc-ts))
          base "/tmp"
          dirs {:base base
                :artifacts   (str base "/artifacts")
