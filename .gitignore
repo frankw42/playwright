@@ -30,4 +30,6 @@ desktop.ini
 .lsp/
 
 # Optional: ignore lock if you don't use it
-deps.edn.lock
+deps.edn.lockartifacts/
+downloads/
+videos/
