@@ -1,0 +1,6 @@
+﻿# Global owner
+*                 @frankw42
+# Library folder
+/libs/time-lib/   @frankw42
+# Example pattern
+*.clj             @frankw42
