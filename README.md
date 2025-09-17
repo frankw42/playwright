@@ -37,34 +37,34 @@ Starting Playwright-based test...   version: 1.0.3 Current time is: 2025-09-13T2
 
 Time:   05:34 PM 
 
-*** Suite Name::  Function Test
-[SETUP] browser: :chromium headless? false artifacts: /tmp/artifacts downloads: /tmp/downloads
-        Navigating to: https://frankw42.github.io/public/index.html
-[OK  ] 001-Title-should-be:-Owl-Buddy - Title should be: Owl Buddy
-[OK  ] 002-Upload:-resources/owlBuddycloudinary.json - Upload: resources/owlBuddycloudinary.json
-[OK  ] 003-Start-flipbook-animation - Start flipbook animation
-[OK  ] 004-Stop-flipbook-animation - Stop flipbook animation
-[OK  ] 005-Download-test - Download test
-[OK  ] 006-Select-image-by-category - Select image by category
-[OK  ] 007-Select-image-by-category - Select image by category
-[OK  ] 008-Select-image-by-category - Select image by category
-[OK  ] 009-Select-image-by-category - Select image by category
-[OK  ] 010-Select-music-track-by-category - Select music track by category
-[OK  ] 011-Start-flipbook-animation - Start flipbook animation
-[OK  ] 012-Stop-flipbook-animation - Stop flipbook animation
-[OK  ] 013-Show-Info-panel - Show Info panel
-[OK  ] 014-Hide-Info-panel - Hide Info panel
-[OK  ] 015-Download-test - Download-test
-[OK  ] 016-Start-flipbook-animation - Start flipbook animation
-[OK  ] 017-Start-tilt-animation - Start tilt animation
-[OK  ] 018-Select-image-by-category - Select image by category
-[OK  ] 019-Select-image-by-category - Select image by category
-[OK  ] 020-Select-image-by-category - Select image by category
-[OK  ] 021-Select-image-by-category - Select image by category
-[OK  ] 022-Select-music-by-category - Select music by category
-[OK  ] 023-Select-music-by-category - Select music by category
-[OK  ] 024-Select-music-by-category - Select music by category
-Email sent: Owl Test - Function Test, Passed (24 of 24)
-[CLEANUP] done
+*** Suite Name::  Function Test  
+[SETUP] browser: :chromium headless? false artifacts: /tmp/artifacts downloads: /tmp/downloads  
+        Navigating to: https://frankw42.github.io/public/index.html  
+[OK  ] 001-Title-should-be:-Owl-Buddy - Title should be: Owl Buddy  
+[OK  ] 002-Upload:-resources/owlBuddycloudinary.json - Upload: resources/owlBuddycloudinary.json  
+[OK  ] 003-Start-flipbook-animation - Start flipbook animation  
+[OK  ] 004-Stop-flipbook-animation - Stop flipbook animation  
+[OK  ] 005-Download-test - Download test  
+[OK  ] 006-Select-image-by-category - Select image by category  
+[OK  ] 007-Select-image-by-category - Select image by category  
+[OK  ] 008-Select-image-by-category - Select image by category  
+[OK  ] 009-Select-image-by-category - Select image by category  
+[OK  ] 010-Select-music-track-by-category - Select music track by category  
+[OK  ] 011-Start-flipbook-animation - Start flipbook animation  
+[OK  ] 012-Stop-flipbook-animation - Stop flipbook animation  
+[OK  ] 013-Show-Info-panel - Show Info panel  
+[OK  ] 014-Hide-Info-panel - Hide Info panel  
+[OK  ] 015-Download-test - Download-test  
+[OK  ] 016-Start-flipbook-animation - Start flipbook animation  
+[OK  ] 017-Start-tilt-animation - Start tilt animation  
+[OK  ] 018-Select-image-by-category - Select image by category  
+[OK  ] 019-Select-image-by-category - Select image by category  
+[OK  ] 020-Select-image-by-category - Select image by category  
+[OK  ] 021-Select-image-by-category - Select image by category  
+[OK  ] 022-Select-music-by-category - Select music by category  
+[OK  ] 023-Select-music-by-category - Select music by category  
+[OK  ] 024-Select-music-by-category - Select music by category  
+Email sent: Owl Test - Function Test, Passed (24 of 24)  
+[CLEANUP] done  
 
 ## 
